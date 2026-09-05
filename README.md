@@ -2,7 +2,7 @@
 
 # QCare
 
-> Localized queue and appointment management system for dental clinics in North Lebanon[cite: 7].
+> Localized queue and appointment management system for dental clinics.
 
 ## Overview
 
