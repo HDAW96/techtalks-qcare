@@ -29,11 +29,11 @@
 
 | Member | Primary Responsibility |
 | :--- | :--- |
-| **Hadi Abdulhakim Awad** | Team Leader / Proposal, Evaluation & Owner Interviews |
-| **Jouri Said** | Customer Research & Evidence Collection |
-| **Hassan El Hussein** | Market Research & Competitor Analysis |
-| **Mohammed Itani** | Customer Interviews & Scope Definition |
-| **Mohammed Dakdouk** | Customer Interviews & Visual Evidence |
+| **Hadi Abdulhakim Awad** | Team Leader |
+| **Jouri Said** | |
+| **Hassan El Hussein** |  |
+| **Mohammed Itani** |  |
+| **Mohammed Dakdouk** |  |
 
 ## Quick Start
 
