@@ -47,4 +47,4 @@ cd qcare
 
 # Run Frontend (React)
 cd frontend
-npm install && npm start
+npm install && npm run dev
