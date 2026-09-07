@@ -29,11 +29,11 @@
 
 | Member | Primary Responsibility |
 | :--- | :--- |
-| **Hadi Abdulhakim Awad** | Team Leader |
-| **Jouri Said** | |
-| **Hassan El Hussein** |  |
-| **Mohammed Itani** |  |
-| **Mohammed Dakdouk** |  |
+| **Hadi Abdulhakim Awad** | Team Leader & Fullstack Developer|
+| **Jouri Said** | Backend Developer |
+| **Hassan El Hussein** | Frontend Developer |
+| **Mohammed Itani** | Backend Developer |
+| **Mohammed Dakdouk** | Frontend Developer |
 
 ## Quick Start
 
@@ -45,6 +45,6 @@ cd qcare
 # Run Backend (Spring Boot)
 ./mvnw spring-boot:run
 
-# Run Frontend (React)
+# Run Frontend (React + Vite)
 cd frontend
-npm install && npm start
+npm install && npm run dev
