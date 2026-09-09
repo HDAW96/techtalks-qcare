@@ -4,29 +4,12 @@ nav {
   padding: 16px;
   border-bottom: 1px solid #ddd;
 }
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
 body {
   width: 100%;
   min-height: 100vh;
-  /* ربط صورة الخلفية الموجودة بـ public/background.jpg */
-  background-image: url('/background.jpg');
+  background-image: url('/wallpaper.jpg'); 
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-}
-
-/* تنسيق شفافية زجاجية للجسم الرئيسي حتى تنقرا الصفحات بوضوح فوق الخلفية */
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
