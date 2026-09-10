@@ -31,6 +31,11 @@ function SiteHeader() {
           <a href="#how" onClick={() => setOpen(false)}>
             How it works
           </a>
+          {/* Phase 1 only: a reviewer's shortcut into the dashboard mockup
+              while there is no real login. Remove once auth is wired up. */}
+          <NavLink to="/dashboard" onClick={() => setOpen(false)}>
+            Preview dashboard
+          </NavLink>
           <NavLink to="/login" onClick={() => setOpen(false)}>
             Sign in
           </NavLink>
