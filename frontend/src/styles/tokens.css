@@ -1,0 +1,58 @@
+/* QCare design tokens.
+   Palette is sampled from the clinic logo: the tooth outline gives the teal,
+   the swoosh gives the petrol. Every colour below has exactly one job, and the
+   status legend on screen is the contract for what each one means. */
+
+:root {
+  /* Ground and paper */
+  --ground: #dfe7e7;
+  --ground-deep: #cfdada;
+  --sheet: #ffffff;
+
+  /* Petrol ink — all structure, rules and body text */
+  --ink: #0e3a47;
+  --ink-soft: #46686f;
+  --ink-faint: #56767d;
+  --rule: #c2d3d6;
+  --rule-strong: #0e3a47;
+
+  /* Status roles. These four are the legend; nothing else carries meaning. */
+  --live: #0b7a7a;
+  --live-bright: #12a5a5;
+  --live-wash: #e4f4f3;
+
+  --wait: #8a5000;
+  --wait-bright: #d99423;
+  --wait-wash: #fbf1e0;
+
+  --miss: #9c2420;
+  --miss-bright: #c7413a;
+  --miss-wash: #f9e9e8;
+
+  --done: #46686f;
+  --done-wash: #eef2f2;
+
+  /* Type — Poppins throughout.
+     Weight scale: headings and logo 700, buttons and nav 600, body 400. */
+  --sans: 'Poppins', system-ui, 'Segoe UI', sans-serif;
+
+  /* Entrance motion */
+  --rise-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Spacing */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+  --s9: 96px;
+
+  /* The sheet sits on a desk, so it casts a real shadow: offset plus blur. */
+  --lift: 0 2px 4px rgba(14, 58, 71, 0.06), 0 8px 24px rgba(14, 58, 71, 0.08);
+  --lift-high: 0 4px 8px rgba(14, 58, 71, 0.08), 0 16px 40px rgba(14, 58, 71, 0.12);
+
+  --measure: 68ch;
+}
