@@ -1,9 +1,21 @@
 import { useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import Logo from './Logo'
+import { useAuth } from '../auth/useAuth'
 
 function SiteHeader() {
   const [open, setOpen] = useState(false)
+  const { user, signOut } = useAuth()
+
+  const close = () => setOpen(false)
+
+  function handleSignOut() {
+    close()
+    signOut()
+    // No navigation here on purpose: clearing the user makes RequireAuth
+    // redirect off any protected route to /login by itself. From a public
+    // page the user simply stays where they are, which is correct.
+  }
 
   return (
     <header className="head">
@@ -25,7 +37,7 @@ function SiteHeader() {
           className={`head__nav${open ? ' is-open' : ''}`}
           aria-label="Main"
         >
-          <NavLink to="/" end onClick={() => setOpen(false)}>
+          <NavLink to="/" end onClick={close}>
             Home
           </NavLink>
           {/* A plain `href="#how"` anchor only works while already on the
@@ -33,24 +45,29 @@ function SiteHeader() {
               current URL instead of navigating there. Routing to "/#how"
               always lands on the home page first; GuestHomePage scrolls to
               the section once it mounts. */}
-          <Link to="/#how" onClick={() => setOpen(false)}>
+          <Link to="/#how" onClick={close}>
             How it works
           </Link>
-          {/* Phase 1 only: a reviewer's shortcut into the dashboard mockup
-              while there is no real login. Remove once auth is wired up. */}
-          <NavLink to="/dashboard" onClick={() => setOpen(false)}>
-            Preview dashboard
-          </NavLink>
-          <NavLink to="/login" onClick={() => setOpen(false)}>
-            Sign in
-          </NavLink>
-          <Link
-            to="/register"
-            className="btn btn--live"
-            onClick={() => setOpen(false)}
-          >
-            Create a record
-          </Link>
+
+          {user ? (
+            <>
+              <NavLink to="/dashboard" onClick={close}>
+                My record
+              </NavLink>
+              <button type="button" className="btn btn--quiet" onClick={handleSignOut}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login" onClick={close}>
+                Sign in
+              </NavLink>
+              <Link to="/register" className="btn btn--live" onClick={close}>
+                Create a record
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>

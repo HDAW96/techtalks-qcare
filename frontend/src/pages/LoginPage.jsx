@@ -1,19 +1,51 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
+import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
 
-/* Phase 1: layout only. The submit handler is deliberately inert until the
-   backend exposes an auth endpoint.
-   Login is by email: the ERD's USERS table has email + password and no
-   phone column, so email is the only identifier the backend can check. */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/* Login is by email: the USERS table has email + password and no phone
+   column, so email is the only identifier the backend can check. */
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [touched, setTouched] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState(null)
 
-  const ready = email.trim() !== '' && password !== ''
+  const { signIn } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Where the user was headed before being sent here by RequireAuth.
+  const destination = location.state?.from?.pathname || '/dashboard'
+
+  const emailError =
+    touched.email && !EMAIL_PATTERN.test(email.trim())
+      ? 'Enter a valid email address'
+      : undefined
+
+  const ready = EMAIL_PATTERN.test(email.trim()) && password !== ''
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (!ready || submitting) return
+
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      await signIn(email.trim(), password)
+      navigate(destination, { replace: true })
+    } catch (error) {
+      setFormError(error.message || 'Could not sign in. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="page">
@@ -36,7 +68,7 @@ function LoginPage() {
                 <p className="meta">Use the email on your record</p>
               </div>
 
-              <form onSubmit={(e) => e.preventDefault()}>
+              <form onSubmit={handleSubmit}>
                 <div className="cells">
                   <Cell
                     label="Email address"
@@ -44,6 +76,9 @@ function LoginPage() {
                     autoComplete="email"
                     placeholder="you@example.com"
                     value={email}
+                    disabled={submitting}
+                    error={emailError}
+                    onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                   <Cell
@@ -51,21 +86,25 @@ function LoginPage() {
                     type="password"
                     autoComplete="current-password"
                     value={password}
+                    disabled={submitting}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
+
+                {formError && (
+                  <p className="form-error" role="alert">
+                    {formError}
+                  </p>
+                )}
 
                 <div className="auth__actions">
                   <button
                     type="submit"
                     className="btn btn--live btn--block"
-                    disabled={!ready}
+                    disabled={!ready || submitting}
                   >
-                    Sign in
+                    {submitting ? 'Signing in…' : 'Sign in'}
                   </button>
-                  <Link to="/dashboard" className="btn btn--quiet btn--block">
-                    Preview the dashboard
-                  </Link>
                 </div>
               </form>
 
