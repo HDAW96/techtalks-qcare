@@ -16,6 +16,7 @@ const SECTIONS = [
     id: 'book',
     label: 'Book appointment',
     subs: [
+      { id: 'doctor', label: 'Doctor' },
       { id: 'service', label: 'Service' },
       { id: 'when', label: 'Date & time' },
       { id: 'confirm', label: 'Confirm' },
@@ -92,7 +93,7 @@ function AppointmentRows({ items, cancellable }) {
 function PatientDashboardPage() {
   const navigate = useNavigate()
   const [section, setSection] = useState('today')
-  const [sub, setSub] = useState({ book: 'service', appointments: 'upcoming' })
+  const [sub, setSub] = useState({ book: 'doctor', appointments: 'upcoming' })
 
   const setSubFor = (id, value) => setSub({ ...sub, [id]: value })
 

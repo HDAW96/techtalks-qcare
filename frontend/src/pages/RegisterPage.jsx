@@ -5,15 +5,17 @@ import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
 import { clinic } from '../data/mock'
 
-/* Registration is the clinic's intake sheet. Phone is the primary identifier
-   because that is what clinics here actually record; email is optional.
+/* Registration is the clinic's intake sheet. Email is the primary identifier —
+   the ERD's USERS table has email + password and no phone column, so email is
+   what the backend will check for sign-in and duplicate accounts. Phone still
+   goes on the record (PATIENT.phone_number), but it is not the login key.
    Phase 1: the only validation is the local password match, so the error state
    is visible to review. Nothing is submitted anywhere yet. */
 function RegisterPage() {
   const [form, setForm] = useState({
     name: '',
-    phone: '',
     email: '',
+    phone: '',
     password: '',
     confirm: '',
   })
@@ -23,7 +25,7 @@ function RegisterPage() {
   const mismatch = form.confirm !== '' && form.confirm !== form.password
   const ready =
     form.name.trim() !== '' &&
-    form.phone.trim() !== '' &&
+    form.email.trim() !== '' &&
     form.password !== '' &&
     !mismatch &&
     form.confirm !== ''
@@ -60,24 +62,26 @@ function RegisterPage() {
                     onChange={set('name')}
                   />
                   <Cell
-                    label="Phone number"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="+961 …"
-                    note="Used to find your record and to call you if the schedule shifts"
-                    value={form.phone}
-                    onChange={set('phone')}
+                    label="Email address"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    note="Used to sign in"
+                    value={form.email}
+                    onChange={set('email')}
                   />
                 </div>
 
                 <div className="cells">
                   <Cell
-                    label="Email address"
-                    type="email"
+                    label="Phone number"
+                    type="tel"
                     optional
-                    autoComplete="email"
-                    value={form.email}
-                    onChange={set('email')}
+                    autoComplete="tel"
+                    placeholder="+961 …"
+                    note="So the desk can reach you if the schedule shifts"
+                    value={form.phone}
+                    onChange={set('phone')}
                   />
                 </div>
 
