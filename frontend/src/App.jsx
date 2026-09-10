@@ -1,20 +1,18 @@
 import { Routes, Route } from 'react-router-dom'
-import NavBar from './components/NavBar'
-import BookingPage from './pages/BookingPage'
-import QueuePage from './pages/QueuePage'
-import DashboardPage from './pages/DashboardPage'
+import GuestHomePage from './pages/GuestHomePage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import PatientDashboardPage from './pages/PatientDashboardPage'
 import './App.css'
 
 function App() {
   return (
-    <>
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<BookingPage />} />
-        <Route path="/queue" element={<QueuePage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<GuestHomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/dashboard" element={<PatientDashboardPage />} />
+    </Routes>
   )
 }
 

@@ -1,0 +1,422 @@
+/* The record: the shared chart grammar every QCare screen is built from.
+   Corners are square because a clinical sheet has square corners; rules are
+   hairlines because a chart is ruled; status is written as a word next to its
+   mark because a legend defines the marks, not the colour alone. */
+
+/* ---------- layout ---------- */
+
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: var(--s5);
+}
+
+.wrap--narrow {
+  max-width: 560px;
+}
+
+.stack > * + * {
+  margin-top: var(--s5);
+}
+
+/* Sections are separated by real voids, not divider lines. */
+.band {
+  padding-block: var(--s9);
+}
+
+.band--tight {
+  padding-block: var(--s7);
+}
+
+.band--ground {
+  background: var(--ground-deep);
+}
+
+/* ---------- the sheet ---------- */
+
+.sheet {
+  background: var(--sheet);
+  box-shadow: var(--lift);
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sheet__body {
+  padding: var(--s6) var(--s5) var(--s7);
+}
+
+.sheet__foot {
+  padding: var(--s4) var(--s5);
+  border-top: 1px solid var(--rule);
+  background: var(--done-wash);
+}
+
+/* Record metadata: the small print that classifies a sheet. */
+.meta {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.meta--right {
+  text-align: right;
+}
+
+/* ---------- the ruled title band ---------- */
+
+.title-band {
+  border-top: 2px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
+  padding-block: var(--s3);
+  margin-bottom: var(--s6);
+}
+
+.title-band h1,
+.title-band h2 {
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  letter-spacing: -0.015em;
+}
+
+.title-band .meta {
+  margin-top: var(--s1);
+  letter-spacing: 0.09em;
+}
+
+/* ---------- ruled cells (form fields) ---------- */
+
+.cells {
+  display: grid;
+  gap: var(--s5);
+}
+
+.cells--two {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 640px) {
+  .cells--two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cell {
+  display: block;
+}
+
+.cell__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: var(--s1);
+}
+
+.cell__optional {
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+
+/* An input is a line on a form, not a floating box. */
+.cell__input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  background: transparent;
+  padding: var(--s2) 0;
+  font-size: 1rem;
+  border-radius: 0;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.cell__input::placeholder {
+  color: var(--ink-faint);
+}
+
+.cell__input:hover {
+  background: var(--done-wash);
+}
+
+.cell__input:focus {
+  outline: none;
+  border-bottom-width: 2px;
+  border-bottom-color: var(--live);
+  background: var(--live-wash);
+}
+
+.cell__input[aria-invalid='true'] {
+  border-bottom-color: var(--miss);
+  background: var(--miss-wash);
+}
+
+.cell__note {
+  margin-top: var(--s1);
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.cell__note--error {
+  color: var(--miss);
+}
+
+/* ---------- controls ---------- */
+
+/* State is carried in the control's body: pressed depresses, disabled
+   flattens into the surface rather than merely changing colour. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s5);
+  border: 1px solid var(--rule-strong);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(14, 58, 71, 0.16);
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out,
+    background-color 120ms ease-out;
+}
+
+.btn:hover {
+  background: var(--ink-soft);
+  box-shadow: 0 4px 10px rgba(14, 58, 71, 0.2);
+}
+
+.btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 3px rgba(14, 58, 71, 0.16);
+}
+
+.btn[disabled] {
+  background: transparent;
+  color: var(--ink-faint);
+  border-color: var(--rule);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--quiet {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.btn--quiet:hover {
+  background: var(--done-wash);
+}
+
+.btn--live {
+  background: var(--live);
+  border-color: var(--live);
+  box-shadow: 0 2px 6px rgba(11, 122, 122, 0.28);
+}
+
+.btn--live:hover {
+  background: #096767;
+}
+
+/* ---------- the legend ---------- */
+
+/* Every mark on a QCare screen is defined here. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+  align-items: center;
+  padding: var(--s3) var(--s5);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--done-wash);
+}
+
+.legend__title {
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mark__glyph {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border: 1.5px solid currentColor;
+}
+
+.mark--live {
+  color: var(--live);
+}
+.mark--live .mark__glyph {
+  background: var(--live-bright);
+  border-color: var(--live);
+}
+
+.mark--wait {
+  color: var(--wait);
+}
+.mark--wait .mark__glyph {
+  background: linear-gradient(
+    135deg,
+    var(--wait-bright) 0 50%,
+    transparent 50% 100%
+  );
+  border-color: var(--wait);
+}
+
+.mark--miss {
+  color: var(--miss);
+}
+.mark--miss .mark__glyph {
+  background: var(--miss-wash);
+  border-color: var(--miss);
+}
+
+.mark--done {
+  color: var(--done);
+}
+.mark--done .mark__glyph {
+  background: var(--done);
+  border-color: var(--done);
+  opacity: 0.4;
+}
+
+/* ---------- the queue board ---------- */
+
+.board {
+  display: grid;
+  gap: 0;
+}
+
+/* Rank is legible in the type before you read the numeral: the front of the
+   queue is set larger and wider, and it narrows as it recedes. */
+.qrow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: var(--s4);
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.qrow__num {
+  font-weight: calc(400 + (var(--rank-lift) * 300));
+  font-size: calc(1rem + (var(--rank-lift) * 1.15rem));
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  min-width: 3.5ch;
+}
+
+.qrow__name {
+  color: var(--ink-soft);
+  font-size: calc(0.875rem + (var(--rank-lift) * 0.2rem));
+}
+
+.qrow__eta {
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.qrow--live .qrow__num,
+.qrow--live .qrow__name {
+  color: var(--live);
+}
+
+.qrow--you {
+  background: var(--live-wash);
+  box-shadow: inset 3px 0 0 var(--live);
+  padding-inline: var(--s3);
+}
+
+/* The now-serving numeral: the one piece of display type in the system. */
+.now {
+  display: grid;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.now__num {
+  font-size: clamp(3.25rem, 1.5rem + 7vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--live);
+  white-space: nowrap;
+}
+
+/* ---------- misc ---------- */
+
+.lede {
+  font-size: 1.0625rem;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.rule {
+  height: 1px;
+  background: var(--rule);
+  border: 0;
+  margin: 0;
+}
+
+/* Demonstration data must always announce itself. */
+.synthetic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-family: var(--sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wait);
+  background: var(--wait-wash);
+  padding: 2px var(--s2);
+}
