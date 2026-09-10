@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import QueueBoard from '../components/QueueBoard'
@@ -19,6 +20,24 @@ const booked = [
 ]
 
 function GuestHomePage() {
+  const { hash } = useLocation()
+
+  /* Client-side navigation does not scroll to a URL hash the way a normal
+     page load does, so arriving at "/#how" (from this page or any other)
+     needs an explicit scroll once the section exists in the DOM.
+     Jumps rather than smooth-scrolling: the page's entrance animation is
+     still playing on mount, and a smooth scroll started underneath it lands
+     short by a varying amount. A jump matches what a plain anchor link does
+     on a full page load anyway. */
+  useEffect(() => {
+    if (!hash) return
+    const id = hash.slice(1)
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [hash])
+
   return (
     <div className="page">
       <SiteHeader />

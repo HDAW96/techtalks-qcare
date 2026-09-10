@@ -28,9 +28,14 @@ function SiteHeader() {
           <NavLink to="/" end onClick={() => setOpen(false)}>
             Home
           </NavLink>
-          <a href="#how" onClick={() => setOpen(false)}>
+          {/* A plain `href="#how"` anchor only works while already on the
+              home page — from anywhere else it just appends the hash to the
+              current URL instead of navigating there. Routing to "/#how"
+              always lands on the home page first; GuestHomePage scrolls to
+              the section once it mounts. */}
+          <Link to="/#how" onClick={() => setOpen(false)}>
             How it works
-          </a>
+          </Link>
           {/* Phase 1 only: a reviewer's shortcut into the dashboard mockup
               while there is no real login. Remove once auth is wired up. */}
           <NavLink to="/dashboard" onClick={() => setOpen(false)}>
