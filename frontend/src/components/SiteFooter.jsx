@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
 import { clinic } from '../data/mock'
+import { useAuth } from '../auth/useAuth'
 
 function SiteFooter() {
+  const { user, loading } = useAuth()
+  const untilKnown = loading ? { visibility: 'hidden' } : undefined
+
   return (
     <footer className="foot">
       <div className="wrap foot__inner">
@@ -24,12 +28,22 @@ function SiteFooter() {
           </p>
         </div>
 
+        {/* Same sign-in rule as the header: the links follow the session. */}
         <nav className="foot__col" aria-label="Footer">
           <p className="meta">Pages</p>
           <Link to="/">Home</Link>
-          <Link to="/login">Sign in</Link>
-          <Link to="/register">Create a record</Link>
-          <Link to="/dashboard">Dashboard</Link>
+          {user ? (
+            <Link to="/dashboard">My record</Link>
+          ) : (
+            <>
+              <Link to="/login" style={untilKnown}>
+                Sign in
+              </Link>
+              <Link to="/register" style={untilKnown}>
+                Create a record
+              </Link>
+            </>
+          )}
         </nav>
       </div>
 

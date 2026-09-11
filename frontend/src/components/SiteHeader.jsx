@@ -5,7 +5,11 @@ import { useAuth } from '../auth/useAuth'
 
 function SiteHeader() {
   const [open, setOpen] = useState(false)
-  const { user, signOut } = useAuth()
+  const { user, loading, signOut } = useAuth()
+  // Until the stored session has been checked, nobody knows which links are
+  // right. The signed-out ones hold their space invisibly instead of showing
+  // "Sign in" to someone who is about to turn out to be signed in.
+  const untilKnown = loading ? { visibility: 'hidden' } : undefined
 
   const close = () => setOpen(false)
 
@@ -60,10 +64,15 @@ function SiteHeader() {
             </>
           ) : (
             <>
-              <NavLink to="/login" onClick={close}>
+              <NavLink to="/login" onClick={close} style={untilKnown}>
                 Sign in
               </NavLink>
-              <Link to="/register" className="btn btn--live" onClick={close}>
+              <Link
+                to="/register"
+                className="btn btn--live"
+                onClick={close}
+                style={untilKnown}
+              >
                 Create a record
               </Link>
             </>
