@@ -14,8 +14,6 @@ public class UserResponse {
     private String phoneNumber;
     private String role;
     private Integer patientId;
-    private String recordNumber;
-    private Boolean mustChangePassword;
 
     public UserResponse() {
     }
@@ -26,10 +24,8 @@ public class UserResponse {
         dto.fullName = user.getFullName();
         dto.phoneNumber = user.getPhoneNumber();
         dto.role = user.getRole();
-        dto.mustChangePassword = user.getMustChangePassword();
         if (patient != null) {
             dto.patientId = patient.getPatientId();
-            dto.recordNumber = patient.getRecordNumber();
         }
         return dto;
     }
@@ -54,11 +50,5 @@ public class UserResponse {
         return patientId;
     }
 
-    public String getRecordNumber() {
-        return recordNumber;
-    }
 
-    public Boolean getMustChangePassword() {
-        return mustChangePassword;
-    }
 }

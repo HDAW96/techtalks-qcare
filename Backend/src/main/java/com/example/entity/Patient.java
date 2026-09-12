@@ -87,9 +87,4 @@ public class Patient {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-    /** The number a patient is given at the desk, e.g. P-00042. */
-    public String getRecordNumber() {
-        return patientId == null ? null : String.format("P-%05d", patientId);
-    }
 }

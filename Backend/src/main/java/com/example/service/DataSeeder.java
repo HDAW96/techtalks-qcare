@@ -70,15 +70,22 @@ public class DataSeeder implements CommandLineRunner {
             Doctor haddad = seedDoctor("Dr. Rania Haddad", "03400001", "General dentistry");
             Doctor fares = seedDoctor("Dr. Karim Fares", "03400002", "Orthodontics");
 
-            // Monday to Friday, 09:00-17:00.
+            // Two windows a day, because the clinic closes over lunch. A
+            // treatment must fit inside one window, so nothing can be booked
+            // across the break.
+            // Dr Haddad: Monday to Friday.
             for (int day = 1; day <= 5; day++) {
                 availabilityRepository.save(
-                        new DoctorAvailability(haddad, day, LocalTime.of(9, 0), LocalTime.of(17, 0)));
+                        new DoctorAvailability(haddad, day, LocalTime.of(9, 0), LocalTime.of(13, 0)));
+                availabilityRepository.save(
+                        new DoctorAvailability(haddad, day, LocalTime.of(14, 0), LocalTime.of(17, 0)));
             }
-            // Tuesday, Thursday and Saturday, 10:00-18:00.
+            // Dr Fares: Tuesday, Thursday and Saturday.
             for (int day : new int[] { 2, 4, 6 }) {
                 availabilityRepository.save(
-                        new DoctorAvailability(fares, day, LocalTime.of(10, 0), LocalTime.of(18, 0)));
+                        new DoctorAvailability(fares, day, LocalTime.of(10, 0), LocalTime.of(13, 0)));
+                availabilityRepository.save(
+                        new DoctorAvailability(fares, day, LocalTime.of(14, 0), LocalTime.of(18, 0)));
             }
             log.info("Seeded {} doctors with availability", doctorRepository.count());
         }
