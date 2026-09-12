@@ -4,16 +4,16 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "PATIENT")
+@Table(name = "patient")
 public class Patient {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "patient_id")
     private Integer patientId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = true)
-    private User user;
+    // @OneToOne
+    // @JoinColumn(name = "user_id", nullable = true)
+    // private User user;
 
     @Column(name = "full_name", nullable = false)
     private String fullName;
