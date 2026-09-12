@@ -379,9 +379,16 @@
   cursor: pointer;
 }
 
-.dash__sub button:hover {
+.dash__sub button:hover:not([disabled]) {
   color: var(--ink);
   background: var(--sheet);
+}
+
+/* A booking step the current choices do not reach yet — same rule as the
+   step bar inside the booking flow. */
+.dash__sub button[disabled] {
+  color: var(--ink-faint);
+  cursor: not-allowed;
 }
 
 .dash__sub button[aria-current='true'] {

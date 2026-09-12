@@ -1,27 +1,37 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
+import SessionLoading from './SessionLoading'
+import SiteHeader from '../components/SiteHeader'
+import SiteFooter from '../components/SiteFooter'
 
-/* Gates a route behind a signed-in user.
+/* Gates a route behind a signed-in user, and optionally behind a role.
    Sends visitors to /login and remembers where they were headed, so signing
    in returns them there instead of dumping them on the home page. */
-function RequireAuth({ children }) {
+function RequireAuth({ children, roles }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
-  // Still checking the stored token — rendering either branch now would
-  // briefly flash the wrong one.
-  if (loading) {
-    return (
-      <div className="page">
-        <div className="empty" role="status">
-          <p>Loading…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <SessionLoading />
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  // Signed in, but this area is not for them. Not a redirect: every role's
+  // home is /dashboard until the doctor and receptionist screens exist, so
+  // redirecting would loop.
+  if (roles && !roles.includes(user.role)) {
+    return (
+      <div className="page">
+        <SiteHeader />
+        <main className="wrap">
+          <div className="empty">
+            <p>This page is not available for your account type yet.</p>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    )
   }
 
   return children

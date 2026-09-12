@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
@@ -17,12 +17,10 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
 
-  const { signIn } = useAuth()
-  const navigate = useNavigate()
+  const { signIn, isMock } = useAuth()
+  // Carries where RequireAuth turned the user away from, so it survives a
+  // detour through the register page too.
   const location = useLocation()
-
-  // Where the user was headed before being sent here by RequireAuth.
-  const destination = location.state?.from?.pathname || '/dashboard'
 
   const emailError =
     touched.email && !EMAIL_PATTERN.test(email.trim())
@@ -38,10 +36,15 @@ function LoginPage() {
     setSubmitting(true)
     setFormError(null)
     try {
+      // No navigate here: once the user is set, RedirectIfSignedIn moves them
+      // on to where they were headed.
       await signIn(email.trim(), password)
-      navigate(destination, { replace: true })
     } catch (error) {
-      setFormError(error.message || 'Could not sign in. Please try again.')
+      setFormError(
+        error.status === 401
+          ? 'That email and password do not match a record.'
+          : error.message || 'Could not sign in. Please try again.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -106,15 +109,26 @@ function LoginPage() {
                     {submitting ? 'Signing in…' : 'Sign in'}
                   </button>
                 </div>
+
+                {isMock && (
+                  <p className="meta" style={{ marginTop: 12 }}>
+                    <span className="synthetic">Sample sign-in</span> No server is
+                    connected yet, so any password is accepted.
+                  </p>
+                )}
               </form>
 
               <div className="auth__alt stack">
                 <p>
-                  No record yet? <Link to="/register">Create one</Link>.
+                  No record yet?{' '}
+                  <Link to="/register" state={location.state}>
+                    Create one
+                  </Link>
+                  .
                 </p>
                 <p>
                   Waiting at the clinic? You don’t need an account —{' '}
-                  <Link to="/">check your ticket</Link> with the number on it.
+                  <Link to="/#how">see how walk-in tickets work</Link>.
                 </p>
               </div>
             </div>

@@ -1,61 +1,28 @@
-import { useEffect, useState } from 'react'
-import { doctors, services, days, times, takenTimes, clinic } from '../data/mock'
+import { clinic } from '../data/mock'
+import { useBookingOptions } from '../data/hooks'
+import { formatDay, formatTime } from '../data/format'
+import { BOOKING_STEPS } from './useBookingDraft'
 
-const STEPS = [
-  { id: 'doctor', label: 'Doctor' },
-  { id: 'service', label: 'Service' },
-  { id: 'when', label: 'Date & time' },
-  { id: 'confirm', label: 'Confirm' },
-]
-
-/* Phase 1: the flow is fully navigable but writes nothing. Phase 2 posts the
-   assembled booking to the backend from `confirm`.
+/* Phase 1: the flow is fully navigable and adds the booking to this session's
+   appointment list, but sends nothing. Phase 2 posts it to the backend from
+   `onConfirm`.
    Doctor comes first: the ERD scopes both APPOINTMENT and QUEUE per doctor,
    so a booking cannot exist without one, and availability depends on which
-   doctor is chosen. */
-function BookingFlow({ step, onStep }) {
-  const [doctor, setDoctor] = useState(null)
-  const [service, setService] = useState(null)
-  const [day, setDay] = useState(null)
-  const [time, setTime] = useState(null)
-  const [placed, setPlaced] = useState(false)
+   doctor is chosen.
+   The choices live in the dashboard (useBookingDraft), which also resolves
+   `step` — this component only renders the step it is given. */
+function BookingFlow({ booking, step, onStep, availability, onConfirm }) {
+  const { doctors, services } = useBookingOptions()
+  const { doctor, service, day, time, reached, choose, placed } = booking
 
-  const reached = {
-    doctor: true,
-    service: Boolean(doctor),
-    when: Boolean(doctor && service),
-    confirm: Boolean(doctor && service && day && time),
-  }
-
-  /* The step is held by the parent, but the selections a step needs live here,
-     so a caller that cannot see those selections (the dashboard's sidebar
-     submenu) can ask for a step that has no data behind it. Every requested
-     step is validated here and clamped to the furthest one the current
-     selections actually support. */
-  const furthest = reached.confirm
-    ? 'confirm'
-    : reached.when
-      ? 'when'
-      : reached.service
-        ? 'service'
-        : 'doctor'
-  const active = reached[step] ? step : furthest
-
-  useEffect(() => {
-    if (active !== step) onStep(active)
-  }, [active, step, onStep])
-
-  const go = (id) => {
-    if (reached[id]) onStep(id)
-  }
-
-  if (placed) {
+  if (step === 'done') {
     return (
       <div className="sheet">
         <div className="sheet__body stack" style={{ textAlign: 'center' }}>
           <h2>Booking recorded</h2>
           <p className="lede" style={{ margin: '0 auto' }}>
-            {service.name} with {doctor.name} on {day.date} at {time}.
+            {placed.service} with {placed.doctor} on {formatDay(placed.datetime)} at{' '}
+            {formatTime(placed.datetime)}.
           </p>
           <p className="meta">
             Nothing was sent to a server — this is the Phase 1 sketch
@@ -64,14 +31,7 @@ function BookingFlow({ step, onStep }) {
             <button
               type="button"
               className="btn btn--quiet"
-              onClick={() => {
-                setPlaced(false)
-                setDoctor(null)
-                setService(null)
-                setDay(null)
-                setTime(null)
-                onStep('doctor')
-              }}
+              onClick={() => onStep('doctor')}
             >
               Book another
             </button>
@@ -81,17 +41,19 @@ function BookingFlow({ step, onStep }) {
     )
   }
 
+  const openTimes = availability.find((d) => d.date === day)?.slots ?? []
+
   return (
     <div className="sheet">
       <div className="steps">
-        {STEPS.map((s) => (
+        {BOOKING_STEPS.map((s) => (
           <button
             key={s.id}
             type="button"
             className="step"
-            aria-current={active === s.id}
+            aria-current={step === s.id}
             disabled={!reached[s.id]}
-            onClick={() => go(s.id)}
+            onClick={() => onStep(s.id)}
           >
             {s.label}
           </button>
@@ -99,7 +61,7 @@ function BookingFlow({ step, onStep }) {
       </div>
 
       <div className="sheet__body">
-        {active === 'doctor' && (
+        {step === 'doctor' && (
           <>
             <div className="title-band">
               <h2>Choose a doctor</h2>
@@ -113,7 +75,7 @@ function BookingFlow({ step, onStep }) {
                   className="pick"
                   aria-pressed={doctor?.id === d.id}
                   onClick={() => {
-                    setDoctor(d)
+                    choose.doctor(d)
                     onStep('service')
                   }}
                 >
@@ -125,11 +87,11 @@ function BookingFlow({ step, onStep }) {
           </>
         )}
 
-        {active === 'service' && (
+        {step === 'service' && (
           <>
             <div className="title-band">
               <h2>Choose a service</h2>
-              <p className="meta">{doctor?.name}</p>
+              <p className="meta">{doctor.name}</p>
             </div>
             <div className="picks">
               {services.map((s) => (
@@ -139,7 +101,7 @@ function BookingFlow({ step, onStep }) {
                   className="pick"
                   aria-pressed={service?.id === s.id}
                   onClick={() => {
-                    setService(s)
+                    choose.service(s)
                     onStep('when')
                   }}
                 >
@@ -151,39 +113,43 @@ function BookingFlow({ step, onStep }) {
           </>
         )}
 
-        {active === 'when' && (
+        {step === 'when' && (
           <>
             <div className="title-band">
               <h2>Pick a day and time</h2>
               <p className="meta">
-                {service?.name} with {doctor?.name}
+                {service.name} with {doctor.name}
               </p>
             </div>
 
-            <p className="cell__label">Day — ticks show slots already taken</p>
+            <p className="cell__label">
+              Day — ticks show times this {service.minutes}-minute visit cannot start
+            </p>
             <div className="picks" style={{ marginBottom: 32 }}>
-              {days.map((d) => {
-                const full = d.taken >= d.slots
+              {availability.map((d) => {
+                const full = d.openCount === 0
                 return (
                   <button
                     key={d.date}
                     type="button"
                     className="pick"
-                    aria-pressed={day?.date === d.date}
+                    aria-pressed={day === d.date}
                     disabled={full}
-                    onClick={() => setDay(d)}
+                    onClick={() => choose.day(d.date)}
                   >
-                    <span className="pick__name">{d.date}</span>
+                    <span className="pick__name">{formatDay(d.date)}</span>
                     <span className="meta">
-                      {full ? 'Full' : `${d.slots - d.taken} slots left`}
+                      {full
+                        ? 'Full'
+                        : `${d.openCount} ${d.openCount === 1 ? 'time' : 'times'} free`}
                     </span>
                     <span className="slots" aria-hidden="true">
-                      {Array.from({ length: d.slots }, (_, i) => (
+                      {d.slots.map((s) => (
                         <span
-                          key={i}
+                          key={s.time}
                           className={[
                             'slot',
-                            i < d.taken ? 'slot--taken' : '',
+                            s.open ? '' : 'slot--taken',
                             full ? 'slot--full' : '',
                           ]
                             .filter(Boolean)
@@ -198,33 +164,30 @@ function BookingFlow({ step, onStep }) {
 
             {day && (
               <>
-                <p className="cell__label">Time on {day.date}</p>
+                <p className="cell__label">Time on {formatDay(day)}</p>
                 <div className="times">
-                  {times.map((t) => {
-                    const taken = takenTimes.includes(t)
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        className="time"
-                        aria-pressed={time === t}
-                        disabled={taken}
-                        onClick={() => {
-                          setTime(t)
-                          onStep('confirm')
-                        }}
-                      >
-                        {t}
-                      </button>
-                    )
-                  })}
+                  {openTimes.map((s) => (
+                    <button
+                      key={s.time}
+                      type="button"
+                      className="time"
+                      aria-pressed={time === s.time}
+                      disabled={!s.open}
+                      onClick={() => {
+                        choose.time(s.time)
+                        onStep('confirm')
+                      }}
+                    >
+                      {s.time}
+                    </button>
+                  ))}
                 </div>
               </>
             )}
           </>
         )}
 
-        {active === 'confirm' && (
+        {step === 'confirm' && (
           <>
             <div className="title-band">
               <h2>Confirm this booking</h2>
@@ -234,7 +197,7 @@ function BookingFlow({ step, onStep }) {
               {[
                 ['Doctor', doctor.name],
                 ['Service', `${service.name} · ${service.minutes} min`],
-                ['Day', day.date],
+                ['Day', formatDay(day)],
                 ['Time', time],
                 ['Clinic', `${clinic.name}, ${clinic.area}`],
               ].map(([k, v]) => (
@@ -249,7 +212,7 @@ function BookingFlow({ step, onStep }) {
               <button
                 type="button"
                 className="btn btn--live btn--block"
-                onClick={() => setPlaced(true)}
+                onClick={onConfirm}
               >
                 Confirm booking
               </button>
