@@ -26,7 +26,8 @@ public class Appointment {
     @Column(name = "appointment_datetime", nullable = false)
     private LocalDateTime appointmentDatetime;
 
-    @Column(nullable = false)
+    /** BOOKED, COMPLETED, CANCELLED or MISSED - matches APPOINTMENT_STATUS in the frontend constants. */
+    @Column(name = "status", nullable = false, length = 20)
     private String status = "BOOKED";
 
     public Appointment() {
@@ -45,19 +46,47 @@ public class Appointment {
         return appointmentId;
     }
 
+    public void setAppointmentId(Integer appointmentId) {
+        this.appointmentId = appointmentId;
+    }
+
     public Patient getPatient() {
         return patient;
+    }
+
+    public void setPatient(Patient patient) {
+        this.patient = patient;
     }
 
     public Doctor getDoctor() {
         return doctor;
     }
 
+    public void setDoctor(Doctor doctor) {
+        this.doctor = doctor;
+    }
+
+    public MedicalService getMedicalService() {
+        return medicalService;
+    }
+
+    public void setMedicalService(MedicalService medicalService) {
+        this.medicalService = medicalService;
+    }
+
     public LocalDateTime getAppointmentDatetime() {
         return appointmentDatetime;
     }
 
+    public void setAppointmentDatetime(LocalDateTime appointmentDatetime) {
+        this.appointmentDatetime = appointmentDatetime;
+    }
+
     public String getStatus() {
         return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

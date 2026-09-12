@@ -3,6 +3,10 @@ package com.example.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * One person's place in a doctor's queue for a day. Walk-ins have no appointment,
+ * so appointment_id is nullable.
+ */
 @Entity
 @Table(name = "queue_ticket")
 public class QueueTicket {
@@ -23,6 +27,7 @@ public class QueueTicket {
     @JoinColumn(name = "service_id", nullable = false)
     private MedicalService medicalService;
 
+    /** Null for a walk-in who arrived without booking. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id", nullable = true)
     private Appointment appointment;
@@ -30,9 +35,86 @@ public class QueueTicket {
     @Column(name = "ticket_number", nullable = false)
     private Integer ticketNumber;
 
-    @Column(name = "status", nullable = false)
-    private String status = "PENDING";
+    /** WAITING, IN_CHAIR, DONE or SKIPPED - matches TICKET_STATUS in the frontend constants. */
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "WAITING";
 
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt = LocalDateTime.now();
+
+    public QueueTicket() {
+    }
+
+    public QueueTicket(Queue queue, Patient patient, MedicalService medicalService, Integer ticketNumber) {
+        this.queue = queue;
+        this.patient = patient;
+        this.medicalService = medicalService;
+        this.ticketNumber = ticketNumber;
+        this.status = "WAITING";
+        this.joinedAt = LocalDateTime.now();
+    }
+
+    public Integer getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(Integer ticketId) {
+        this.ticketId = ticketId;
+    }
+
+    public Queue getQueue() {
+        return queue;
+    }
+
+    public void setQueue(Queue queue) {
+        this.queue = queue;
+    }
+
+    public Patient getPatient() {
+        return patient;
+    }
+
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
+
+    public MedicalService getMedicalService() {
+        return medicalService;
+    }
+
+    public void setMedicalService(MedicalService medicalService) {
+        this.medicalService = medicalService;
+    }
+
+    public Appointment getAppointment() {
+        return appointment;
+    }
+
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
+
+    public Integer getTicketNumber() {
+        return ticketNumber;
+    }
+
+    public void setTicketNumber(Integer ticketNumber) {
+        this.ticketNumber = ticketNumber;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getJoinedAt() {
+        return joinedAt;
+    }
+
+    public void setJoinedAt(LocalDateTime joinedAt) {
+        this.joinedAt = joinedAt;
+    }
 }
