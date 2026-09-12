@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 public class MedicalService {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "service_id" , nullable = false)
+    @Column(name = "service_id", nullable = false)
     private Integer serviceId;
 
     @Column(name = "name", nullable = false)

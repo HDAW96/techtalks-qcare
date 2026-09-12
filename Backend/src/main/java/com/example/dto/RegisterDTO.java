@@ -1,20 +1,30 @@
 package com.example.dto;
 
-import java.time.LocalDateTime;
-
-public class BookingRequestDTO {
+public class RegisterDTO {
     private String fullName;
     private String phoneNumber;
     private Integer doctorId;
+    private String email;
+    private String password;
     private Integer serviceId; // Added for the new schema
-    private LocalDateTime appointmentDatetime;
 
+    public RegisterDTO() {
+    }
+    
     public String getFullName() {
         return fullName;
     }
 
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public Integer getDoctorId() {
@@ -25,7 +35,4 @@ public class BookingRequestDTO {
         return serviceId;
     }
 
-    public LocalDateTime getAppointmentDatetime() {
-        return appointmentDatetime;
-    }
 }

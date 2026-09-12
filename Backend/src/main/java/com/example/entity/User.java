@@ -14,8 +14,8 @@ public class User {
     @Column(name = "full_name", nullable = false, unique = true)
     private String fullName;
 
-    @Column(name = "email", nullable = false, unique = true)
-    private String email;
+    // @Column(name = "email", nullable = false, unique = true)
+    // private String email;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
@@ -40,13 +40,13 @@ public class User {
         this.fullName = fullName;
     }
 
-    public String getEmail() {
-        return email;
-    }
+    // public String getEmail() {
+    // return email;
+    // }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    // public void setEmail(String email) {
+    // this.email = email;
+    // }
 
     public String getPasswordHash() {
         return passwordHash;
