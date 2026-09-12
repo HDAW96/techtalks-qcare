@@ -407,6 +407,17 @@
   margin: 0;
 }
 
+/* Form-level failure — a rejected sign-in, a server that did not answer.
+   Field-level problems use .cell__note--error instead. */
+.form-error {
+  margin-top: var(--s5);
+  padding: var(--s3) var(--s4);
+  border-left: 3px solid var(--miss);
+  background: var(--miss-wash);
+  color: var(--miss);
+  font-size: 0.9375rem;
+}
+
 /* Demonstration data must always announce itself. */
 .synthetic {
   display: inline-flex;

@@ -68,6 +68,13 @@ export const appointments = {
   ],
 }
 
+/* Appointments and queues are per-doctor in the ERD, so booking has to pick
+   one — there is no clinic-wide slot. */
+export const doctors = [
+  { id: 'haddad', name: 'Dr. Rania Haddad', specialization: 'General dentistry' },
+  { id: 'fares', name: 'Dr. Karim Fares', specialization: 'Orthodontics' },
+]
+
 export const services = [
   { id: 'consult', name: 'Consultation', minutes: 20 },
   { id: 'clean', name: 'Cleaning and scaling', minutes: 45 },

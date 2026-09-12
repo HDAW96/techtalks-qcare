@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import QueueBoard from '../components/QueueBoard'
@@ -8,6 +7,7 @@ import Mark from '../components/Mark'
 import Cell from '../components/Cell'
 import QrPlaceholder from '../components/QrPlaceholder'
 import BookingFlow from '../components/BookingFlow'
+import { useAuth } from '../auth/useAuth'
 import { patient, clinic, queue, appointments, notifications } from '../data/mock'
 
 const SECTIONS = [
@@ -16,6 +16,7 @@ const SECTIONS = [
     id: 'book',
     label: 'Book appointment',
     subs: [
+      { id: 'doctor', label: 'Doctor' },
       { id: 'service', label: 'Service' },
       { id: 'when', label: 'Date & time' },
       { id: 'confirm', label: 'Confirm' },
@@ -90,9 +91,9 @@ function AppointmentRows({ items, cancellable }) {
 }
 
 function PatientDashboardPage() {
-  const navigate = useNavigate()
+  const { user, signOut } = useAuth()
   const [section, setSection] = useState('today')
-  const [sub, setSub] = useState({ book: 'service', appointments: 'upcoming' })
+  const [sub, setSub] = useState({ book: 'doctor', appointments: 'upcoming' })
 
   const setSubFor = (id, value) => setSub({ ...sub, [id]: value })
 
@@ -103,7 +104,7 @@ function PatientDashboardPage() {
       <main className="wrap dash">
         <aside className="dash__index">
           <div className="dash__who">
-            <p className="dash__name">{patient.name}</p>
+            <p className="dash__name">{user?.fullName ?? patient.name}</p>
             <p className="meta">Record {patient.recordNo}</p>
           </div>
 
@@ -147,7 +148,7 @@ function PatientDashboardPage() {
             <button
               type="button"
               className="dash__link"
-              onClick={() => navigate('/')}
+              onClick={signOut}
             >
               Log out
             </button>
