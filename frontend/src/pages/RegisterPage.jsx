@@ -5,21 +5,17 @@ import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
 import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
+import { isValidPhone } from '../phone'
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-// Deliberately loose: Lebanese numbers get written many ways (+961, 03, 70…),
-// so this only rejects input that clearly is not a phone number.
-const PHONE_PATTERN = /^[+\d][\d\s-]{6,}$/
 const MIN_PASSWORD = 8
 
-/* Email is the primary identifier — the USERS table has email + password and
-   no phone column, so email is what the backend checks for sign-in and for
-   duplicate accounts. Phone still goes on the record (PATIENT.phone_number)
-   but is not the login key. */
+/* An account is a phone number, a full name and a password. There is no email:
+   the USERS table does not have one. The name is part of the identity rather
+   than a label, because a family shares one phone number and each of them gets
+   their own record. */
 function RegisterPage() {
   const [form, setForm] = useState({
     name: '',
-    email: '',
     phone: '',
     password: '',
     confirm: '',
@@ -40,13 +36,9 @@ function RegisterPage() {
   const errors = {
     name:
       touched.name && form.name.trim() === '' ? 'Enter your full name' : undefined,
-    email:
-      touched.email && !EMAIL_PATTERN.test(form.email.trim())
-        ? 'Enter a valid email address'
-        : undefined,
     phone:
-      touched.phone && form.phone.trim() !== '' && !PHONE_PATTERN.test(form.phone.trim())
-        ? 'Enter a valid phone number'
+      touched.phone && !isValidPhone(form.phone)
+        ? 'Enter a Lebanese number, for example 03 123456'
         : undefined,
     password:
       touched.password && form.password.length < MIN_PASSWORD
@@ -60,10 +52,9 @@ function RegisterPage() {
 
   const ready =
     form.name.trim() !== '' &&
-    EMAIL_PATTERN.test(form.email.trim()) &&
+    isValidPhone(form.phone) &&
     form.password.length >= MIN_PASSWORD &&
-    form.confirm === form.password &&
-    (form.phone.trim() === '' || PHONE_PATTERN.test(form.phone.trim()))
+    form.confirm === form.password
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -76,14 +67,13 @@ function RegisterPage() {
       // on to where they were headed.
       await register({
         fullName: form.name.trim(),
-        email: form.email.trim(),
-        phoneNumber: form.phone.trim() || null,
+        phoneNumber: form.phone.trim(),
         password: form.password,
       })
     } catch (error) {
       setFormError(
-        error.code === 'EMAIL_TAKEN'
-          ? 'An account with this email already exists. Try signing in instead.'
+        error.code === 'ACCOUNT_EXISTS'
+          ? 'An account already exists for this name and phone number. Try signing in instead.'
           : error.message || 'Could not create your record. Please try again.',
       )
     } finally {
@@ -126,27 +116,11 @@ function RegisterPage() {
                     onChange={set('name')}
                   />
                   <Cell
-                    label="Email address"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    note="Used to sign in"
-                    value={form.email}
-                    disabled={submitting}
-                    error={errors.email}
-                    onBlur={blur('email')}
-                    onChange={set('email')}
-                  />
-                </div>
-
-                <div className="cells">
-                  <Cell
                     label="Phone number"
                     type="tel"
-                    optional
                     autoComplete="tel"
-                    placeholder="+961 …"
-                    note="So the desk can reach you if the schedule shifts"
+                    placeholder="03 123456"
+                    note="You sign in with this and your name"
                     value={form.phone}
                     disabled={submitting}
                     error={errors.phone}

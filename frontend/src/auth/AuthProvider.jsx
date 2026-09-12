@@ -8,30 +8,30 @@ import {
   setUnauthorizedHandler,
 } from '../api/client'
 import { AuthContext } from './context'
+import { normalisePhone } from '../phone'
 
 /* Holds the signed-in user for the whole app.
-   Phase 1 note: the endpoints below do not exist yet. Until they do,
-   VITE_USE_MOCK_AUTH=true (the default in development) signs in locally so
-   the dashboard stays reviewable. Flip it off and the exact same calls go to
-   the real backend — no component changes. */
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH !== 'false'
+   These calls now reach the real backend. VITE_USE_MOCK_AUTH=true signs in
+   locally instead, which is only useful for looking at screens with the
+   backend stopped — it accepts any password and stores nothing on a server. */
 
-/* The sample patient. patientId 44 is the patient who owns the sample queue
-   ticket and appointments in data/mock.js. */
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+
+/* Mock mode only. */
 const MOCK_USER = {
   userId: 12,
   patientId: 44,
   fullName: 'Hassan El Hussein',
-  email: 'hassan@example.com',
-  phoneNumber: '+961 70 000 000',
+  phoneNumber: '03000000',
   role: 'PATIENT',
 }
 
-/* Mock mode only. With a backend, /auth/me says who a token belongs to.
-   Without one, the signed-in user is stored next to the token so a reload
-   restores the same person, and registered accounts are remembered by email
-   (never with a password) so signing out and back in finds the same record. */
+/* Mock mode only. With the backend running, /auth/me says who a token belongs
+   to. Without one, the signed-in user is stored next to the token so a reload
+   restores the same person, and registered accounts are remembered by phone
+   and name (never with a password) so signing out and back in finds the same
+   record. */
 const MOCK_SESSION_KEY = 'qcare.mockUser'
 const MOCK_ACCOUNTS_KEY = 'qcare.mockAccounts'
 
@@ -41,6 +41,11 @@ function readStored(key) {
   } catch {
     return null
   }
+}
+
+/* Mock accounts are keyed the way the real table is: phone plus name. */
+function mockKey(phoneNumber, fullName) {
+  return `${normalisePhone(phoneNumber)}|${fullName.trim().replace(/[ ]+/g, ' ').toLowerCase()}`
 }
 
 function writeStored(key, value) {
@@ -125,17 +130,20 @@ export function AuthProvider({ children }) {
     return () => setUnauthorizedHandler(null)
   }, [])
 
+  /* Phone number and full name together, because a family shares one phone:
+     the number alone does not say which of them is signing in. */
   const signIn = useCallback(
-    async (email, password) => {
+    async (phoneNumber, fullName, password) => {
       if (USE_MOCK) {
         const accounts = readStored(MOCK_ACCOUNTS_KEY) ?? {}
-        const signedIn = accounts[email.toLowerCase()] ?? { ...MOCK_USER, email }
+        const signedIn =
+          accounts[mockKey(phoneNumber, fullName)] ?? { ...MOCK_USER, fullName, phoneNumber }
         startSession('mock-token', signedIn)
         return signedIn
       }
       const { token, user: signedIn } = await apiPost(
         '/auth/login',
-        { email, password },
+        { phoneNumber, fullName, password },
         { auth: false },
       )
       startSession(token, signedIn)
@@ -148,16 +156,19 @@ export function AuthProvider({ children }) {
     async (details) => {
       if (USE_MOCK) {
         const accounts = readStored(MOCK_ACCOUNTS_KEY) ?? {}
-        const key = details.email.toLowerCase()
+        const key = mockKey(details.phoneNumber, details.fullName)
         if (accounts[key]) {
-          throw new ApiError('Email already registered', 409, 'EMAIL_TAKEN')
+          throw new ApiError(
+            'An account already exists for this name and phone number',
+            409,
+            'ACCOUNT_EXISTS',
+          )
         }
         // Named fields only: `details` also carries the password, which must
         // never end up in app state or storage.
         const created = {
           ...MOCK_USER,
           fullName: details.fullName,
-          email: details.email,
           phoneNumber: details.phoneNumber,
         }
         writeStored(MOCK_ACCOUNTS_KEY, { ...accounts, [key]: created })

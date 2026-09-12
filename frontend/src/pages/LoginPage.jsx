@@ -5,13 +5,14 @@ import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
 import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
+import { isValidPhone } from '../phone'
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-/* Login is by email: the USERS table has email + password and no phone
-   column, so email is the only identifier the backend can check. */
+/* Sign-in is phone number + full name + password. A family shares one phone
+   number, so the number alone does not say which of them is signing in — the
+   backend looks up the pair. */
 function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [touched, setTouched] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -22,12 +23,12 @@ function LoginPage() {
   // detour through the register page too.
   const location = useLocation()
 
-  const emailError =
-    touched.email && !EMAIL_PATTERN.test(email.trim())
-      ? 'Enter a valid email address'
+  const phoneError =
+    touched.phone && !isValidPhone(phone)
+      ? 'Enter a Lebanese number, for example 03 123456'
       : undefined
 
-  const ready = EMAIL_PATTERN.test(email.trim()) && password !== ''
+  const ready = isValidPhone(phone) && fullName.trim() !== '' && password !== ''
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -38,11 +39,11 @@ function LoginPage() {
     try {
       // No navigate here: once the user is set, RedirectIfSignedIn moves them
       // on to where they were headed.
-      await signIn(email.trim(), password)
+      await signIn(phone.trim(), fullName.trim(), password)
     } catch (error) {
       setFormError(
         error.status === 401
-          ? 'That email and password do not match a record.'
+          ? 'Those details do not match a record. Check the name is spelled as it was registered.'
           : error.message || 'Could not sign in. Please try again.',
       )
     } finally {
@@ -68,21 +69,29 @@ function LoginPage() {
             <div className="sheet__body">
               <div className="title-band">
                 <h1>Sign in</h1>
-                <p className="meta">Use the email on your record</p>
+                <p className="meta">Use the phone number and name on your record</p>
               </div>
 
               <form onSubmit={handleSubmit}>
                 <div className="cells">
                   <Cell
-                    label="Email address"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={email}
+                    label="Phone number"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="03 123456"
+                    value={phone}
                     disabled={submitting}
-                    error={emailError}
-                    onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                    onChange={(e) => setEmail(e.target.value)}
+                    error={phoneError}
+                    onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <Cell
+                    label="Full name"
+                    autoComplete="name"
+                    placeholder="As written on your record"
+                    value={fullName}
+                    disabled={submitting}
+                    onChange={(e) => setFullName(e.target.value)}
                   />
                   <Cell
                     label="Password"
@@ -112,8 +121,8 @@ function LoginPage() {
 
                 {isMock && (
                   <p className="meta" style={{ marginTop: 12 }}>
-                    <span className="synthetic">Sample sign-in</span> No server is
-                    connected yet, so any password is accepted.
+                    <span className="synthetic">Sample sign-in</span> The backend is
+                    switched off, so any password is accepted.
                   </p>
                 )}
               </form>
