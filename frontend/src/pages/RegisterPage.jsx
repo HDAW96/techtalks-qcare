@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Cell from '../components/Cell'
@@ -29,9 +29,12 @@ function RegisterPage() {
   const [formError, setFormError] = useState(null)
 
   const { register } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
+  const set = (key) => (e) => {
+    const { value } = e.target
+    setForm((f) => ({ ...f, [key]: value }))
+  }
   const blur = (key) => () => setTouched((t) => ({ ...t, [key]: true }))
 
   const errors = {
@@ -69,13 +72,14 @@ function RegisterPage() {
     setSubmitting(true)
     setFormError(null)
     try {
+      // No navigate here: once the user is set, RedirectIfSignedIn moves them
+      // on to where they were headed.
       await register({
         fullName: form.name.trim(),
         email: form.email.trim(),
         phoneNumber: form.phone.trim() || null,
         password: form.password,
       })
-      navigate('/dashboard', { replace: true })
     } catch (error) {
       setFormError(
         error.code === 'EMAIL_TAKEN'
@@ -193,7 +197,11 @@ function RegisterPage() {
 
               <div className="auth__alt">
                 <p>
-                  Already registered? <Link to="/login">Sign in</Link>.
+                  Already registered?{' '}
+                  <Link to="/login" state={location.state}>
+                    Sign in
+                  </Link>
+                  .
                 </p>
               </div>
             </div>

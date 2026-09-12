@@ -45,8 +45,10 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler
 }
 
-async function request(method, path, body) {
-  const token = getToken()
+/* `auth: false` is for sign-in and register: they must not carry an old token,
+   and a 401 from them means wrong credentials, not an expired session. */
+async function request(method, path, body, { auth = true } = {}) {
+  const token = auth ? getToken() : null
 
   let res
   try {
@@ -68,9 +70,15 @@ async function request(method, path, body) {
     )
   }
 
-  if (res.status === 401) {
-    setToken(null)
-    onUnauthorized?.()
+  // Only a request that sent a token can find its session expired. Without
+  // one, the 401 falls through to the ordinary error below.
+  if (res.status === 401 && token) {
+    // End only the session this request was made with. If the user signed in
+    // again while it was in flight, that newer token must survive.
+    if (getToken() === token) {
+      setToken(null)
+      onUnauthorized?.()
+    }
     throw new ApiError('Your session has expired. Please sign in again.', 401, 'UNAUTHORIZED')
   }
 
@@ -90,6 +98,6 @@ async function request(method, path, body) {
 }
 
 export const apiGet = (path) => request('GET', path)
-export const apiPost = (path, body) => request('POST', path, body)
+export const apiPost = (path, body, options) => request('POST', path, body, options)
 export const apiPatch = (path, body) => request('PATCH', path, body)
 export const apiDelete = (path) => request('DELETE', path)

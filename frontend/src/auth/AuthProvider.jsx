@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ApiError,
   apiGet,
   apiPost,
   getToken,
@@ -10,18 +11,45 @@ import { AuthContext } from './context'
 
 /* Holds the signed-in user for the whole app.
    Phase 1 note: the endpoints below do not exist yet. Until they do,
-   VITE_USE_MOCK_AUTH=true (the default in development) signs in a sample
-   patient locally so the dashboard stays reviewable. Flip it off and the
-   exact same calls go to the real backend — no component changes. */
+   VITE_USE_MOCK_AUTH=true (the default in development) signs in locally so
+   the dashboard stays reviewable. Flip it off and the exact same calls go to
+   the real backend — no component changes. */
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH !== 'false'
 
+/* The sample patient. patientId 44 is the patient who owns the sample queue
+   ticket and appointments in data/mock.js. */
 const MOCK_USER = {
   userId: 12,
   patientId: 44,
   fullName: 'Hassan El Hussein',
   email: 'hassan@example.com',
+  phoneNumber: '+961 70 000 000',
   role: 'PATIENT',
+}
+
+/* Mock mode only. With a backend, /auth/me says who a token belongs to.
+   Without one, the signed-in user is stored next to the token so a reload
+   restores the same person, and registered accounts are remembered by email
+   (never with a password) so signing out and back in finds the same record. */
+const MOCK_SESSION_KEY = 'qcare.mockUser'
+const MOCK_ACCOUNTS_KEY = 'qcare.mockAccounts'
+
+function readStored(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key))
+  } catch {
+    return null
+  }
+}
+
+function writeStored(key, value) {
+  try {
+    if (value == null) localStorage.removeItem(key)
+    else localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Not fatal: the mock session simply will not survive a reload.
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -30,8 +58,22 @@ export function AuthProvider({ children }) {
   // stored token is still being checked.
   const [loading, setLoading] = useState(true)
 
+  /* Bumped by every sign-in, register and sign-out. A session check that
+     started before one of those is out of date and must not overwrite it. */
+  const session = useRef(0)
+
+  const startSession = useCallback((token, nextUser) => {
+    session.current += 1
+    setToken(token)
+    if (USE_MOCK) writeStored(MOCK_SESSION_KEY, nextUser)
+    setUser(nextUser)
+    setLoading(false)
+  }, [])
+
   const signOut = useCallback(() => {
+    session.current += 1
     setToken(null)
+    writeStored(MOCK_SESSION_KEY, null)
     setUser(null)
   }, [])
 
@@ -39,6 +81,8 @@ export function AuthProvider({ children }) {
      it may be expired, so the backend has the final say via /auth/me. */
   useEffect(() => {
     let cancelled = false
+    const startedAt = session.current
+    const stillCurrent = () => !cancelled && session.current === startedAt
 
     async function restore() {
       const token = getToken()
@@ -48,8 +92,8 @@ export function AuthProvider({ children }) {
       }
 
       if (USE_MOCK) {
-        if (!cancelled) {
-          setUser(MOCK_USER)
+        if (stillCurrent()) {
+          setUser(readStored(MOCK_SESSION_KEY) ?? MOCK_USER)
           setLoading(false)
         }
         return
@@ -57,10 +101,10 @@ export function AuthProvider({ children }) {
 
       try {
         const me = await apiGet('/auth/me')
-        if (!cancelled) setUser(me)
+        if (stillCurrent()) setUser(me)
       } catch {
         // Invalid or expired token; client.js has already cleared it.
-        if (!cancelled) setUser(null)
+        if (stillCurrent()) setUser(null)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -74,34 +118,60 @@ export function AuthProvider({ children }) {
 
   /* An expired token mid-session clears the user wherever it happens. */
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null))
+    setUnauthorizedHandler(() => {
+      session.current += 1
+      setUser(null)
+    })
     return () => setUnauthorizedHandler(null)
   }, [])
 
-  const signIn = useCallback(async (email, password) => {
-    if (USE_MOCK) {
-      setToken('mock-token')
-      setUser(MOCK_USER)
-      return MOCK_USER
-    }
-    const { token, user: signedIn } = await apiPost('/auth/login', { email, password })
-    setToken(token)
-    setUser(signedIn)
-    return signedIn
-  }, [])
+  const signIn = useCallback(
+    async (email, password) => {
+      if (USE_MOCK) {
+        const accounts = readStored(MOCK_ACCOUNTS_KEY) ?? {}
+        const signedIn = accounts[email.toLowerCase()] ?? { ...MOCK_USER, email }
+        startSession('mock-token', signedIn)
+        return signedIn
+      }
+      const { token, user: signedIn } = await apiPost(
+        '/auth/login',
+        { email, password },
+        { auth: false },
+      )
+      startSession(token, signedIn)
+      return signedIn
+    },
+    [startSession],
+  )
 
-  const register = useCallback(async (details) => {
-    if (USE_MOCK) {
-      setToken('mock-token')
-      const created = { ...MOCK_USER, ...details }
-      setUser(created)
+  const register = useCallback(
+    async (details) => {
+      if (USE_MOCK) {
+        const accounts = readStored(MOCK_ACCOUNTS_KEY) ?? {}
+        const key = details.email.toLowerCase()
+        if (accounts[key]) {
+          throw new ApiError('Email already registered', 409, 'EMAIL_TAKEN')
+        }
+        // Named fields only: `details` also carries the password, which must
+        // never end up in app state or storage.
+        const created = {
+          ...MOCK_USER,
+          fullName: details.fullName,
+          email: details.email,
+          phoneNumber: details.phoneNumber,
+        }
+        writeStored(MOCK_ACCOUNTS_KEY, { ...accounts, [key]: created })
+        startSession('mock-token', created)
+        return created
+      }
+      const { token, user: created } = await apiPost('/auth/register', details, {
+        auth: false,
+      })
+      startSession(token, created)
       return created
-    }
-    const { token, user: created } = await apiPost('/auth/register', details)
-    setToken(token)
-    setUser(created)
-    return created
-  }, [])
+    },
+    [startSession],
+  )
 
   const value = useMemo(
     () => ({ user, loading, signIn, register, signOut, isMock: USE_MOCK }),

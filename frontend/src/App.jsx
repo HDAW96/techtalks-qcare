@@ -3,23 +3,41 @@ import GuestHomePage from './pages/GuestHomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PatientDashboardPage from './pages/PatientDashboardPage'
+import NotFoundPage from './pages/NotFoundPage'
 import RequireAuth from './auth/RequireAuth'
+import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
+import { ROLE } from './constants'
 import './App.css'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<GuestHomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/login"
+        element={
+          <RedirectIfSignedIn>
+            <LoginPage />
+          </RedirectIfSignedIn>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <RedirectIfSignedIn>
+            <RegisterPage />
+          </RedirectIfSignedIn>
+        }
+      />
       <Route
         path="/dashboard"
         element={
-          <RequireAuth>
+          <RequireAuth roles={[ROLE.PATIENT]}>
             <PatientDashboardPage />
           </RequireAuth>
         }
       />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

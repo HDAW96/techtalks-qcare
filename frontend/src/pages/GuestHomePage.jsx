@@ -4,7 +4,9 @@ import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import QueueBoard from '../components/QueueBoard'
 import Legend from '../components/Legend'
-import { queue, clinic } from '../data/mock'
+import { useAuth } from '../auth/useAuth'
+import { clinic } from '../data/mock'
+import { useQueue } from '../data/hooks'
 
 const walkIn = [
   'Scan the QR code at the clinic desk.',
@@ -20,7 +22,12 @@ const booked = [
 ]
 
 function GuestHomePage() {
-  const { hash } = useLocation()
+  // `key` changes on every navigation, even to the same "/#how" again.
+  const { hash, key } = useLocation()
+  const { user, loading } = useAuth()
+  const untilKnown = loading ? { visibility: 'hidden' } : undefined
+  // The public board: no patient id, so no row is marked as anyone's ticket.
+  const queue = useQueue()
 
   /* Client-side navigation does not scroll to a URL hash the way a normal
      page load does, so arriving at "/#how" (from this page or any other)
@@ -28,7 +35,9 @@ function GuestHomePage() {
      Jumps rather than smooth-scrolling: the page's entrance animation is
      still playing on mount, and a smooth scroll started underneath it lands
      short by a varying amount. A jump matches what a plain anchor link does
-     on a full page load anyway. */
+     on a full page load anyway.
+     Re-runs on `key` as well as `hash`, so following the same link twice
+     scrolls twice. */
   useEffect(() => {
     if (!hash) return
     const id = hash.slice(1)
@@ -36,7 +45,7 @@ function GuestHomePage() {
       document.getElementById(id)?.scrollIntoView()
     }, 0)
     return () => clearTimeout(timer)
-  }, [hash])
+  }, [hash, key])
 
   return (
     <div className="page">
@@ -54,12 +63,25 @@ function GuestHomePage() {
                 chair.
               </p>
               <div className="hero__actions">
-                <Link to="/register" className="btn btn--live">
-                  Create a record
-                </Link>
-                <Link to="/login" className="btn btn--quiet">
-                  Sign in
-                </Link>
+                {user ? (
+                  <>
+                    <Link to="/dashboard" className="btn btn--live">
+                      Go to my record
+                    </Link>
+                    <Link to="/dashboard?section=book" className="btn btn--quiet">
+                      Book an appointment
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/register" className="btn btn--live" style={untilKnown}>
+                      Create a record
+                    </Link>
+                    <Link to="/login" className="btn btn--quiet" style={untilKnown}>
+                      Sign in
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
@@ -165,15 +187,23 @@ function GuestHomePage() {
             <div className="sheet">
               <div className="cta">
                 <div>
-                  <h2>Register once, then book or walk in</h2>
+                  <h2>
+                    {user ? 'Book your next visit' : 'Register once, then book or walk in'}
+                  </h2>
                   <p className="lede" style={{ marginTop: 8 }}>
                     A record keeps your appointments and your queue tickets
                     together.
                   </p>
                 </div>
-                <Link to="/register" className="btn btn--live">
-                  Create a record
-                </Link>
+                {user ? (
+                  <Link to="/dashboard?section=book" className="btn btn--live">
+                    Book an appointment
+                  </Link>
+                ) : (
+                  <Link to="/register" className="btn btn--live" style={untilKnown}>
+                    Create a record
+                  </Link>
+                )}
               </div>
             </div>
           </div>
