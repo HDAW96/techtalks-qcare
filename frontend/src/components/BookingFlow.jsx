@@ -3,15 +3,15 @@ import { useBookingOptions } from '../data/hooks'
 import { formatDay, formatTime } from '../data/format'
 import { BOOKING_STEPS } from './useBookingDraft'
 
-/* Phase 1: the flow is fully navigable and adds the booking to this session's
-   appointment list, but sends nothing. Phase 2 posts it to the backend from
-   `onConfirm`.
+/* `onConfirm` posts the booking to the backend, which has the final say - it
+   may refuse a slot someone else has just taken, and `error` carries that back
+   to this screen.
    Doctor comes first: the ERD scopes both APPOINTMENT and QUEUE per doctor,
    so a booking cannot exist without one, and availability depends on which
    doctor is chosen.
    The choices live in the dashboard (useBookingDraft), which also resolves
    `step` — this component only renders the step it is given. */
-function BookingFlow({ booking, step, onStep, availability, onConfirm }) {
+function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, error }) {
   const { doctors, services } = useBookingOptions()
   const { doctor, service, day, time, reached, choose, placed } = booking
 
@@ -25,7 +25,7 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm }) {
             {formatTime(placed.datetime)}.
           </p>
           <p className="meta">
-            Nothing was sent to a server — this is the Phase 1 sketch
+            Saved to your record. It is in My appointments now.
           </p>
           <div>
             <button
@@ -208,13 +208,20 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm }) {
               ))}
             </dl>
 
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+
             <div className="auth__actions">
               <button
                 type="button"
                 className="btn btn--live btn--block"
                 onClick={onConfirm}
+                disabled={placing}
               >
-                Confirm booking
+                {placing ? 'Booking…' : 'Confirm booking'}
               </button>
               <button
                 type="button"

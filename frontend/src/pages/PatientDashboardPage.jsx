@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
@@ -127,11 +127,9 @@ function PatientDashboardPage() {
   const appointments = useAppointments()
   const notifications = useNotifications()
   const booking = useBookingDraft()
-  const availability = useAvailability(
-    booking.doctor?.id,
-    booking.service?.minutes,
-    appointments.all,
-  )
+  // The server works out free times: it knows the doctor's hours and everyone
+  // else's bookings, which this screen must never see.
+  const availability = useAvailability(booking.doctor?.id, booking.service?.id)
 
   /* Where the patient is on the dashboard lives in the URL, so a refresh
      keeps it and the browser's Back button steps back through it. */
@@ -154,19 +152,33 @@ function PatientDashboardPage() {
     if (section === 'notifications') markAllRead()
   }, [section, markAllRead])
 
-  function confirmBooking() {
-    const appointment = {
-      id: `AP-NEW-${Date.now()}`,
-      doctorId: booking.doctor.id,
-      doctor: booking.doctor.name,
-      service: booking.service.name,
-      minutes: booking.service.minutes,
-      datetime: `${booking.day}T${booking.time}`,
-      status: APPOINTMENT_STATUS.BOOKED,
+  const [bookingError, setBookingError] = useState(null)
+  const [placing, setPlacing] = useState(false)
+
+  /* The server has the final say. Someone else may have taken the slot while
+     this screen was open, so the appointment shown afterwards is the one that
+     came back, not the one we sent. */
+  async function confirmBooking() {
+    if (placing) return
+    setPlacing(true)
+    setBookingError(null)
+    try {
+      const appointment = await appointments.book({
+        doctorId: booking.doctor.id,
+        serviceId: booking.service.id,
+        datetime: `${booking.day}T${booking.time}`,
+      })
+      booking.place(appointment)
+      openStep('done')
+    } catch (error) {
+      setBookingError(
+        error.code === 'SLOT_TAKEN'
+          ? 'That time has just been taken. Please choose another.'
+          : error.message || 'Could not book that time. Please try again.',
+      )
+    } finally {
+      setPlacing(false)
     }
-    appointments.add(appointment)
-    booking.place(appointment)
-    openStep('done')
   }
 
   const isCurrentSub = (sectionId, subId) =>
@@ -286,6 +298,8 @@ function PatientDashboardPage() {
               onStep={openStep}
               availability={availability}
               onConfirm={confirmBooking}
+              placing={placing}
+              error={bookingError}
             />
           )}
 
@@ -372,17 +386,11 @@ function PatientDashboardPage() {
                     <Cell
                       label="Phone number"
                       type="tel"
-                      optional
+                      note="You sign in with this and your name"
                       defaultValue={user.phoneNumber ?? ''}
                     />
                   </div>
                   <div className="cells cells--two">
-                    <Cell
-                      label="Email address"
-                      type="email"
-                      note="Used to sign in"
-                      defaultValue={user.email}
-                    />
                     <Cell
                       label="Preferred language"
                       defaultValue="English"
