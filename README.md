@@ -35,16 +35,117 @@
 | **Mohammed Itani** | Backend Developer |
 | **Mohammed Dakdouk** | Frontend Developer |
 
-## Quick Start
+## Running it locally
+
+### What you need first
+
+| | Version | Notes |
+| :--- | :--- | :--- |
+| **Java** | 25 | `java -version` to check |
+| **Node.js** | 20 or newer | `node -v` to check |
+| **MySQL** | 8.4 | Must be running before the backend starts |
+
+Maven is **not** needed — the project ships with the `mvnw` wrapper.
+
+### 1. Clone
 
 ```bash
-# Clone project
-git clone [https://github.com/your-org/qcare.git](https://github.com/your-org/qcare.git)
-cd qcare
+git clone https://github.com/HDAW96/techtalks-qcare.git
+cd techtalks-qcare
+```
 
-# Run Backend (Spring Boot)
+### 2. Create the database
+
+The backend creates the tables itself on first run, but the empty database has
+to exist first:
+
+```sql
+CREATE DATABASE qcare_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+`utf8mb4` matters — it is what stores Arabic text correctly.
+
+### 3. Tell the backend your MySQL password
+
+The password is **not** in the repository, so each of us sets it once on our own
+machine. Use whatever password your local MySQL root account has.
+
+**Windows (PowerShell):**
+
+```powershell
+[Environment]::SetEnvironmentVariable('QCARE_DB_PASSWORD','your-password','User')
+```
+
+**macOS / Linux:** add to `~/.zshrc` or `~/.bashrc`:
+
+```bash
+export QCARE_DB_PASSWORD='your-password'
+```
+
+Open a new terminal afterwards, or the variable will not be visible yet.
+
+> Without this the backend stops at startup with
+> `Access denied for user 'root'@'localhost'`.
+
+### 4. Run the backend
+
+```bash
+cd Backend
 ./mvnw spring-boot:run
+```
 
-# Run Frontend (React + Vite)
+Starts on **http://localhost:8080**. On first run it creates the nine tables and
+adds the clinic's doctors and treatments, so there is something to book.
+
+### 5. Run the frontend
+
+In a second terminal:
+
+```bash
 cd frontend
-npm install && npm run dev
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173**.
+
+### The three ports
+
+| Port | What |
+| :--- | :--- |
+| 5173 | Frontend — the pages you see |
+| 8080 | Backend — the API the pages call |
+| 3306 | MySQL — where everything is stored |
+
+Both servers need to be running. The frontend talks to `localhost:8080` by
+default; set `VITE_API_BASE_URL` if yours is elsewhere.
+
+### Looking at the screens without a backend
+
+**Windows (PowerShell):**
+
+```powershell
+$env:VITE_USE_MOCK_AUTH='true'; npm run dev
+```
+
+**macOS / Linux:**
+
+```bash
+VITE_USE_MOCK_AUTH=true npm run dev
+```
+
+Signs in locally with sample data and accepts any password. Useful for working
+on a screen's appearance; nothing is saved anywhere.
+
+## What currently works
+
+| Area | Status |
+| :--- | :--- |
+| Register, sign in, session | Real — phone number + full name + password |
+| Doctors and treatments | Real — from the database |
+| Free times and booking | Real — the server works out the slots |
+| A patient's appointments | Real |
+| Walk-in queue | **Sample data** — endpoints not built yet |
+| Notifications | **Sample data** — no table exists in the ERD yet |
+| Cancel / reschedule | Buttons are present but do nothing yet |
+| Receptionist and doctor screens | Not built |
