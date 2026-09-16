@@ -150,3 +150,44 @@ export const notifications = [
     at: '22 Jul 2026',
   },
 ]
+
+/* ── DESK — SAMPLE DATA ─────────────────────────────────────────────
+   Receptionist screens only. Shapes match the API on purpose: numeric
+   ids, and `label` arrives from the backend already formatted, so the
+   screens need no change when the real endpoints land.
+   mohammad dakdouk */
+
+export const deskDoctors = [
+  {
+    id: 1, name: 'Dr. Rania Haddad', specialization: 'General dentistry',
+    hours: '09:00 – 18:00', scheduledToday: true, queueId: 7, queueStatus: 'OPEN',
+  },
+  {
+    id: 2, name: 'Dr. Karim Fares', specialization: 'Orthodontics',
+    hours: '14:00 – 18:00', scheduledToday: true, queueId: null, queueStatus: null,
+  },
+  {
+    id: 3, name: 'Dr. Samir Nassar', specialization: 'Surgery',
+    hours: null, scheduledToday: false, queueId: null, queueStatus: null,
+  },
+]
+
+export const deskQueues = {
+  1: {
+    queueId: 7,
+    updatedAt: '12:41',
+    entries: [
+      { ticketId: 101, label: 'R-14', patientId: 51, patientName: 'Rania Haddad',
+        service: 'Cleaning and scaling', source: 'BOOKED',  status: 'IN_CHAIR', eta: null, publicCode: 'k7m2xq9p' },
+      { ticketId: 102, label: 'R-15', patientId: 38, patientName: 'Nour Khalil',
+        service: 'Consultation',        source: 'WALK_IN', status: 'WAITING',  eta: 8,    publicCode: 'a3n8vd1t' },
+      { ticketId: 103, label: 'R-16', patientId: 44, patientName: 'Ali Mansour',
+        service: 'Filling',             source: 'BOOKED',  status: 'WAITING',  eta: 21,   publicCode: 'w9r4hs6b' },
+      { ticketId: 104, label: 'R-17', patientId: 62, patientName: 'Maya Chahine',
+        service: 'Extraction',          source: 'WALK_IN', status: 'SKIPPED',  eta: null, publicCode: 'z2c7ky5m' },
+      { ticketId: 105, label: 'R-13', patientId: 17, patientName: 'Omar Saad',
+        service: 'Consultation',        source: 'BOOKED',  status: 'DONE',     eta: null, publicCode: 'q6f1jx3n' },
+    ],
+  },
+  2: { queueId: null, updatedAt: '12:41', entries: [] },
+}
