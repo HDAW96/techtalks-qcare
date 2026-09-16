@@ -21,7 +21,3 @@ export const formatTime = (datetime) => datetime.slice(11, 16)
    Lives here so the patient dashboard and the desk share one version. */
 export const formatRecordNumber = (id) =>
   id == null ? '' : `P-${String(id).padStart(5, '0')}`
-
-/* The desk search box accepts "P-00044", "00044" or "44". */
-export const parseRecordNumber = (input) =>
-  Number(String(input).trim().replace(/^P-?/i, '')) || null

@@ -152,42 +152,47 @@ export const notifications = [
 ]
 
 /* ── DESK — SAMPLE DATA ─────────────────────────────────────────────
-   Receptionist screens only. Shapes match the API on purpose: numeric
-   ids, and `label` arrives from the backend already formatted, so the
-   screens need no change when the real endpoints land.
+   Receptionist screens only. Shapes follow the SCRUM-56 queue guide, so
+   the screens need no change when the real endpoints land:
+   - deskToday     = GET /api/queues/today
+   - deskTickets   = GET /api/queues/{queueId}/tickets, keyed by queueId
+   `ticket` arrives from the backend already formatted ("R-14").
+   `patientId` is not in the guide yet: requested from Itani so the desk
+   can show the record number (P-00044) it looks patients up by.
    mohammad dakdouk */
 
-export const deskDoctors = [
-  {
-    id: 1, name: 'Dr. Rania Haddad', specialization: 'General dentistry',
-    hours: '09:00 – 18:00', scheduledToday: true, queueId: 7, queueStatus: 'OPEN',
-  },
-  {
-    id: 2, name: 'Dr. Karim Fares', specialization: 'Orthodontics',
-    hours: '14:00 – 18:00', scheduledToday: true, queueId: null, queueStatus: null,
-  },
-  {
-    id: 3, name: 'Dr. Samir Nassar', specialization: 'Surgery',
-    hours: null, scheduledToday: false, queueId: null, queueStatus: null,
-  },
-]
+export const deskToday = {
+  date: '2026-09-17',
+  qrUrl: '/join?date=2026-09-17&sig=sample',
+  doctors: [
+    {
+      doctorId: 1, doctorName: 'Dr. Rania Haddad', scheduledToday: true,
+      queue: { queueId: 7, status: 'OPEN', openedBy: 'Lara Khoury', waitingCount: 2 },
+    },
+    { doctorId: 2, doctorName: 'Dr. Karim Fares', scheduledToday: true, queue: null },
+    { doctorId: 3, doctorName: 'Dr. Samir Nassar', scheduledToday: false, queue: null },
+  ],
+}
 
-export const deskQueues = {
-  1: {
-    queueId: 7,
+export const deskTickets = {
+  7: {
     updatedAt: '12:41',
     entries: [
-      { ticketId: 101, label: 'R-14', patientId: 51, patientName: 'Rania Haddad',
-        service: 'Cleaning and scaling', source: 'BOOKED',  status: 'IN_CHAIR', eta: null, publicCode: 'k7m2xq9p' },
-      { ticketId: 102, label: 'R-15', patientId: 38, patientName: 'Nour Khalil',
-        service: 'Consultation',        source: 'WALK_IN', status: 'WAITING',  eta: 8,    publicCode: 'a3n8vd1t' },
-      { ticketId: 103, label: 'R-16', patientId: 44, patientName: 'Ali Mansour',
-        service: 'Filling',             source: 'BOOKED',  status: 'WAITING',  eta: 21,   publicCode: 'w9r4hs6b' },
-      { ticketId: 104, label: 'R-17', patientId: 62, patientName: 'Maya Chahine',
-        service: 'Extraction',          source: 'WALK_IN', status: 'SKIPPED',  eta: null, publicCode: 'z2c7ky5m' },
-      { ticketId: 105, label: 'R-13', patientId: 17, patientName: 'Omar Saad',
-        service: 'Consultation',        source: 'BOOKED',  status: 'DONE',     eta: null, publicCode: 'q6f1jx3n' },
+      { ticketId: 101, ticket: 'R-14', patientId: 51, patientName: 'Hiba Rahal', phoneNumber: '03123456',
+        service: 'Cleaning and scaling', status: 'IN_CHAIR', booked: true, appointmentTime: '2026-09-17T12:30',
+        joinedAt: '2026-09-17T12:21', position: 0, etaMinutes: null },
+      { ticketId: 102, ticket: 'R-15', patientId: 38, patientName: 'Nour Khalil', phoneNumber: '71234567',
+        service: 'Consultation', status: 'WAITING', booked: false, appointmentTime: null,
+        joinedAt: '2026-09-17T12:25', position: 1, etaMinutes: 8 },
+      { ticketId: 103, ticket: 'R-16', patientId: 44, patientName: 'Ali Mansour', phoneNumber: '76345678',
+        service: 'Filling', status: 'WAITING', booked: true, appointmentTime: '2026-09-17T13:00',
+        joinedAt: '2026-09-17T12:34', position: 2, etaMinutes: 21 },
+      { ticketId: 104, ticket: 'R-17', patientId: 62, patientName: 'Maya Chahine', phoneNumber: '03456789',
+        service: 'Extraction', status: 'SKIPPED', booked: false, appointmentTime: null,
+        joinedAt: '2026-09-17T12:02', position: null, etaMinutes: null },
+      { ticketId: 105, ticket: 'R-13', patientId: 17, patientName: 'Omar Saad', phoneNumber: '70567890',
+        service: 'Consultation', status: 'DONE', booked: true, appointmentTime: '2026-09-17T11:30',
+        joinedAt: '2026-09-17T11:24', position: null, etaMinutes: null },
     ],
   },
-  2: { queueId: null, updatedAt: '12:41', entries: [] },
 }
