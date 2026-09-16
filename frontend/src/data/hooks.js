@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { notifications as sampleNotifications, queue } from './mock'
+import { notifications as sampleNotifications, queue, deskDoctors, deskQueues  } from './mock'
 import { apiGet, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
@@ -173,4 +173,62 @@ export function useAvailability(doctorId, serviceId) {
   }, [key, doctorId, serviceId])
 
   return result.key === key ? result.days : []
+}
+
+
+/* ── DESK ───────────────────────────────────────────────────────────
+   SAMPLE DATA. No queue endpoints exist yet. When they do, only the
+   bodies below change: the screens read these return values, not mock. */
+
+export function useTodaysDoctors() {
+  return useMemo(
+    () => ({ doctors: deskDoctors, loading: false, error: null, sample: true }),
+    [],
+  )
+}
+
+export function useDeskQueue(doctorId) {
+  const [entries, setEntries] = useState([])
+
+  /* Stored with the doctor it was fetched for, so a previous doctor's
+     queue is never shown while a new request is in flight. */
+  useEffect(() => {
+    setEntries(doctorId ? (deskQueues[doctorId]?.entries ?? []) : [])
+  }, [doctorId])
+
+  /* Local today. Tomorrow this posts and refetches, like `book` above:
+     the server has the final say on whether the move is allowed. */
+  const setStatus = useCallback(async (ticketId, status) => {
+    setEntries((list) =>
+      list.map((t) => (t.ticketId === ticketId ? { ...t, status } : t)),
+    )
+  }, [])
+
+  const addWalkIn = useCallback(async (draft) => {
+    setEntries((list) => {
+      const n = list.length + 13
+      return [...list, {
+        ticketId: Date.now(),
+        label: `R-${n}`,
+        patientId: 900 + list.length,
+        patientName: draft.fullName,
+        service: draft.service,
+        source: 'WALK_IN',
+        status: TICKET_STATUS.WAITING,
+        eta: 45,
+        publicCode: 'sample00',
+      }]
+    })
+  }, [])
+
+  return useMemo(() => ({
+    entries,
+    updatedAt: doctorId ? deskQueues[doctorId]?.updatedAt : null,
+    waiting: entries.filter((e) => e.status === TICKET_STATUS.WAITING).length,
+    setStatus,
+    addWalkIn,
+    loading: false,
+    error: null,
+    sample: true,
+  }), [entries, doctorId, setStatus, addWalkIn])
 }
