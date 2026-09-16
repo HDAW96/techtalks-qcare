@@ -17,7 +17,7 @@ import {
   useNotifications,
   useQueue,
 } from '../data/hooks'
-import { formatDay, formatTime } from '../data/format'
+import { formatDay, formatRecordNumber, formatTime } from '../data/format'
 import { APPOINTMENT_STATUS, STATUS_MARK } from '../constants'
 
 const SECTIONS = [
@@ -44,9 +44,6 @@ const APPOINTMENT_LABEL = {
   [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
   [APPOINTMENT_STATUS.MISSED]: 'Missed',
 }
-
-/* The record number shown on the sheet, derived from PATIENT.patient_id. */
-const recordNumber = (patientId) => `P-${String(patientId).padStart(5, '0')}`
 
 function aheadOfYou(count) {
   if (count === 0) return 'You are at the front of the queue'
@@ -193,7 +190,7 @@ function PatientDashboardPage() {
           <div className="dash__who">
             <p className="dash__name">{user.fullName}</p>
             {user.patientId != null && (
-              <p className="meta">Record {recordNumber(user.patientId)}</p>
+              <p className="meta">Record {formatRecordNumber(user.patientId)}</p>
             )}
           </div>
 
@@ -307,7 +304,7 @@ function PatientDashboardPage() {
             <div className="sheet">
               <SheetHead
                 title="My appointments"
-                note={`Record ${recordNumber(user.patientId)}`}
+                note={`Record ${formatRecordNumber(user.patientId)}`}
               />
               <div className="tabs">
                 {['upcoming', 'past'].map((t) => (
@@ -372,7 +369,7 @@ function PatientDashboardPage() {
             <div className="sheet">
               <SheetHead
                 title="Profile"
-                note={`Record ${recordNumber(user.patientId)}`}
+                note={`Record ${formatRecordNumber(user.patientId)}`}
               />
               <div className="sheet__body">
                 {/* Keyed by user so the fields refill if the user changes. */}

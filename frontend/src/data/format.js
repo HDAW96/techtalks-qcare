@@ -15,3 +15,9 @@ export function formatDay(value, { year = false } = {}) {
 
 /* "2026-09-17T10:30" → "10:30". */
 export const formatTime = (datetime) => datetime.slice(11, 16)
+
+/* The clinic's record number, derived from PATIENT.patient_id.
+   The backend sends the raw id (44); the prefix is display only.
+   Lives here so the patient dashboard and the desk share one version. */
+export const formatRecordNumber = (id) =>
+  id == null ? '' : `P-${String(id).padStart(5, '0')}`

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { notifications as sampleNotifications, queue } from './mock'
+import { notifications as sampleNotifications, queue, deskToday, deskTickets } from './mock'
 import { apiGet, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
@@ -173,4 +173,74 @@ export function useAvailability(doctorId, serviceId) {
   }, [key, doctorId, serviceId])
 
   return result.key === key ? result.days : []
+}
+
+
+/* ── DESK ───────────────────────────────────────────────────────────
+   SAMPLE DATA. No queue endpoints exist yet. When they do, only the
+   bodies below change: the screens read these return values, not mock. */
+
+/* GET /api/queues/today: the clinic QR and one row per doctor, with
+   `queue` null until that doctor's queue is opened today. */
+export function useTodaysDoctors() {
+  const [doctors, setDoctors] = useState(deskToday.doctors)
+
+  /* Local today. Tomorrow this is POST /api/queues { doctorId } and a
+     refetch. Not scheduled today is a warning only: it never blocks. */
+  const openQueue = useCallback(async (doctorId) => {
+    setDoctors((list) =>
+      list.map((d) =>
+        d.doctorId === doctorId && !d.queue
+          ? { ...d, queue: { queueId: 1000 + doctorId, status: 'OPEN', openedBy: 'You', waitingCount: 0 } }
+          : d,
+      ),
+    )
+  }, [])
+
+  return useMemo(() => ({
+    date: deskToday.date,
+    qrUrl: deskToday.qrUrl,
+    doctors,
+    openQueue,
+    loading: false,
+    error: null,
+    sample: true,
+  }), [doctors, openQueue])
+}
+
+// One shared empty list, so an empty queue doesn't look "changed" every render.
+const NO_TICKETS = []
+
+/* GET /api/queues/{queueId}/tickets: one doctor's queue, with names. */
+export function useDeskQueue(queueId) {
+  /* Local status changes are stored with the queue they were made in, so
+     switching doctors never shows the previous doctor's rows, not even for
+     one render. Same idea as `useAvailability` above. */
+  const [edits, setEdits] = useState({ key: null, entries: [] })
+  const base = (queueId && deskTickets[queueId]?.entries) || NO_TICKETS
+  const entries = edits.key === queueId ? edits.entries : base
+
+  /* Local today. Tomorrow this posts and refetches, like `book` above:
+     the server has the final say on whether the move is allowed. */
+  const setStatus = useCallback(async (ticketId, status) => {
+    setEdits((prev) => {
+      const list = prev.key === queueId ? prev.entries : base
+      return {
+        key: queueId,
+        entries: list.map((t) => (t.ticketId === ticketId ? { ...t, status } : t)),
+      }
+    })
+  }, [queueId, base])
+
+  return useMemo(() => ({
+    entries,
+    updatedAt: queueId ? (deskTickets[queueId]?.updatedAt ?? null) : null,
+    waiting: entries.filter((e) => e.status === TICKET_STATUS.WAITING).length,
+    // One doctor, one chair: the server refuses a second IN_CHAIR (409).
+    chairTaken: entries.some((e) => e.status === TICKET_STATUS.IN_CHAIR),
+    setStatus,
+    loading: false,
+    error: null,
+    sample: true,
+  }), [entries, queueId, setStatus])
 }

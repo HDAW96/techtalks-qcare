@@ -3,6 +3,7 @@ import GuestHomePage from './pages/GuestHomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PatientDashboardPage from './pages/PatientDashboardPage'
+import ReceptionPage from './pages/ReceptionPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RequireAuth from './auth/RequireAuth'
 import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
@@ -37,6 +38,7 @@ function App() {
           </RequireAuth>
         }
       />
+      <Route path="/reception" element={<ReceptionPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
