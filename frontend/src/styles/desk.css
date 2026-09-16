@@ -1,0 +1,35 @@
+/* Desk-only additions. Everything else comes from record.css:
+   .sheet, .btn, .mark, .meta, .empty are reused as they are. */
+
+.btn--sm { padding: 6px 14px; font-size: 11px; }
+
+.desk-cols { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+
+.doc { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.doc:last-child { border-bottom: 0; }
+.doc--on { background: var(--live-wash); box-shadow: inset 3px 0 0 var(--live); }
+.doc__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.doc__name { font-weight: 600; font-size: 15px; }
+.doc__warn { font-size: 12px; color: var(--miss); font-weight: 600; margin: 6px 0 0; }
+
+.desk { width: 100%; border-collapse: collapse; }
+.desk th {
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 600; text-align: left;
+  padding: 10px 12px; border-bottom: 1px solid var(--rule-strong);
+}
+.desk td { padding: 14px 12px; border-bottom: 1px solid var(--rule); font-size: 14px; }
+.desk__right { text-align: right; }
+.desk--live td { background: var(--live-wash); }
+.desk__tick { font-weight: 700; font-size: 17px; color: var(--live); }
+.desk__name { font-weight: 600; }
+.desk__src {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 600; color: var(--ink-faint);
+  border: 1px solid var(--rule); padding: 3px 8px; border-radius: 999px;
+}
+.desk__acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* QrPlaceholder has no size rule anywhere in the system. */
+.qr { width: 180px; height: 180px; }
+.qr--ticket { width: 120px; height: 120px; }
