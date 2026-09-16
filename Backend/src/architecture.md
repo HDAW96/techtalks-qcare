@@ -27,3 +27,7 @@ The system logic is decoupled into distinct packages inside `src/main/java`:
 
 ### 5. Cross-Cutting Utilities
 * **`util/`**: Helper methods, date/time transformers, and response formatter utilities.
+
+
+ ### Recommendations
+ Implement `QueueService` to manage real-time queue ticket statuses in the `service` package.
