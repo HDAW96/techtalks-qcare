@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.example.dto.AppointmentBookingDTO;
+import com.example.dto.AppointmentRescheduleDTO;
 import com.example.dto.AppointmentResponse;
 import com.example.service.BookingService;
 import com.example.web.ApiException;
@@ -8,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +39,15 @@ public class AppointmentController {
             @RequestBody AppointmentBookingDTO request) {
         AppointmentResponse booked = bookingService.book(signedInUserId(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(booked);
+    }
+
+    /** Moves one of the caller's own appointments to a new time. */
+    @PatchMapping("/{appointmentId}")
+    public AppointmentResponse reschedule(Authentication authentication,
+            @PathVariable Integer appointmentId,
+            @RequestBody AppointmentRescheduleDTO request) {
+        return bookingService.reschedule(signedInUserId(authentication), appointmentId,
+                request.getDatetime());
     }
 
     /**

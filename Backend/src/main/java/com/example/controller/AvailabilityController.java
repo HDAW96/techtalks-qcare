@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.dto.DayAvailabilityResponse;
 import com.example.service.BookingService;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,8 +36,12 @@ public class AvailabilityController {
     public List<DayAvailabilityResponse> availability(
             @PathVariable Integer doctorId,
             @RequestParam Integer serviceId,
-            @RequestParam(required = false) Integer days) {
+            @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) Integer ignoring,
+            Authentication authentication) {
         int wanted = days == null ? DEFAULT_DAYS : Math.min(Math.max(days, 1), MAX_DAYS);
-        return bookingService.availability(doctorId, serviceId, wanted);
+        Integer userId = authentication != null && authentication.getPrincipal() instanceof Integer id
+                ? id : null;
+        return bookingService.availability(doctorId, serviceId, wanted, userId, ignoring);
     }
 }

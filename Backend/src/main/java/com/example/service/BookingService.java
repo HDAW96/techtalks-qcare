@@ -71,9 +71,21 @@ public class BookingService {
      * doctor's working windows and overlaps nothing already booked. Checking
      * the end as well as the start is what stops a 45 minute cleaning being
      * booked at 12:45 when the clinic closes for lunch at 13:00.
+     *
+     * When a patient is moving an appointment, `ignoringId` names it so its
+     * current time does not block the times around it. Only its owner may
+     * pass it: otherwise anyone could learn when someone else is booked.
      */
     @Transactional(readOnly = true)
-    public List<DayAvailabilityResponse> availability(Integer doctorId, Integer serviceId, int days) {
+    public List<DayAvailabilityResponse> availability(Integer doctorId, Integer serviceId, int days,
+            Integer userId, Integer ignoringId) {
+        if (ignoringId != null) {
+            if (userId == null) {
+                throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                        "Please sign in again.");
+            }
+            ownedAppointment(userId, ignoringId);
+        }
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "DOCTOR_NOT_FOUND",
                         "That doctor was not found."));
@@ -97,8 +109,7 @@ public class BookingService {
                 continue;
             }
 
-            List<Appointment> taken = appointmentRepository.findBookedForDoctorBetween(
-                    doctor, date.atStartOfDay(), date.plusDays(1).atStartOfDay());
+            List<Appointment> taken = takenForDay(doctor, date, ignoringId);
 
             List<DayAvailabilityResponse.Slot> slots = new ArrayList<>();
             for (LocalTime start : gridTimes(windows)) {
@@ -132,13 +143,73 @@ public class BookingService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
                         "That treatment was not found."));
 
-        LocalDateTime when;
+        LocalDateTime when = parseDatetime(request.getDatetime());
+        requireBookable(doctor, service, when, null);
+
+        Appointment appointment = new Appointment(patient, doctor, when, service);
+        appointmentRepository.save(appointment);
+        return AppointmentResponse.of(appointment);
+    }
+
+    /**
+     * Moves one of the signed-in patient's own appointments to a new time with
+     * the same doctor and treatment. The new time passes exactly the checks a
+     * fresh booking does.
+     */
+    @Transactional
+    public AppointmentResponse reschedule(Integer userId, Integer appointmentId, String datetime) {
+        Appointment appointment = ownedAppointment(userId, appointmentId);
+
+        if (!"BOOKED".equals(appointment.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_RESCHEDULABLE",
+                    "Only a booked appointment can be moved.");
+        }
+        if (datetime == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "BOOKING_INCOMPLETE",
+                    "Please choose a new time.");
+        }
+        LocalDateTime when = parseDatetime(datetime);
+        if (when.equals(appointment.getAppointmentDatetime())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_TIME",
+                    "That is already the time of this appointment.");
+        }
+
+        requireBookable(appointment.getDoctor(), appointment.getMedicalService(), when,
+                appointment.getAppointmentId());
+
+        appointment.setAppointmentDatetime(when);
+        appointmentRepository.save(appointment);
+        return AppointmentResponse.of(appointment);
+    }
+
+    /**
+     * The appointment, but only if it is the caller's. Someone else's answers
+     * the same as one that does not exist, so ids cannot be probed.
+     */
+    private Appointment ownedAppointment(Integer userId, Integer appointmentId) {
+        Patient patient = patientOf(userId);
+        return appointmentRepository.findById(appointmentId)
+                .filter(a -> a.getPatient().getPatientId().equals(patient.getPatientId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "APPOINTMENT_NOT_FOUND",
+                        "That appointment was not found."));
+    }
+
+    private LocalDateTime parseDatetime(String datetime) {
         try {
-            when = LocalDateTime.parse(request.getDatetime(), LOCAL_DATETIME);
+            return LocalDateTime.parse(datetime, LOCAL_DATETIME);
         } catch (DateTimeParseException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "DATETIME_INVALID",
                     "That is not a valid date and time.");
         }
+    }
+
+    /**
+     * Refuses a time that has passed, falls outside the doctor's hours, or
+     * overlaps another booking. `ignoringId` is the appointment being moved:
+     * it must not count as clashing with its own new time.
+     */
+    private void requireBookable(Doctor doctor, MedicalService service, LocalDateTime when,
+            Integer ignoringId) {
         if (!when.isAfter(LocalDateTime.now())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "DATETIME_PAST",
                     "That time has already passed. Please choose another.");
@@ -161,19 +232,21 @@ public class BookingService {
         // minute, but treatments have length: a 45 minute cleaning at 10:00
         // also blocks 10:30.
         LocalDate date = when.toLocalDate();
-        boolean clash = appointmentRepository
-                .findBookedForDoctorBetween(doctor, date.atStartOfDay(), date.plusDays(1).atStartOfDay())
-                .stream()
+        boolean clash = takenForDay(doctor, date, ignoringId).stream()
                 .anyMatch(a -> overlaps(when, duration,
                         a.getAppointmentDatetime(), a.getMedicalService().getDurationMinutes()));
         if (clash) {
             throw new ApiException(HttpStatus.CONFLICT, "SLOT_TAKEN",
                     "That time has just been taken. Please choose another.");
         }
+    }
 
-        Appointment appointment = new Appointment(patient, doctor, when, service);
-        appointmentRepository.save(appointment);
-        return AppointmentResponse.of(appointment);
+    private List<Appointment> takenForDay(Doctor doctor, LocalDate date, Integer ignoringId) {
+        return appointmentRepository
+                .findBookedForDoctorBetween(doctor, date.atStartOfDay(), date.plusDays(1).atStartOfDay())
+                .stream()
+                .filter(a -> !a.getAppointmentId().equals(ignoringId))
+                .toList();
     }
 
     /** Half-hour starts covering every working window of the day. */

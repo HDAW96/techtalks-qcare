@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { notifications as sampleNotifications, queue, deskToday, deskTickets } from './mock'
-import { apiGet, apiPost } from '../api/client'
+import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
 /* The one place screens get clinic data from.
@@ -77,6 +77,12 @@ export function useAppointments() {
     return created
   }, [])
 
+  const reschedule = useCallback(async (id, datetime) => {
+    const moved = await apiPatch(`/appointments/${id}`, { datetime })
+    setReloads((n) => n + 1)
+    return moved
+  }, [])
+
   return useMemo(() => {
     const byDate = [...items].sort((a, b) => a.datetime.localeCompare(b.datetime))
     const isUpcoming = (a) => a.status === APPOINTMENT_STATUS.BOOKED
@@ -88,8 +94,9 @@ export function useAppointments() {
       loading,
       error,
       book,
+      reschedule,
     }
-  }, [items, loading, error, book])
+  }, [items, loading, error, book, reschedule])
 }
 
 /* SAMPLE DATA — the ERD has no notifications table, so there is nothing to
@@ -148,17 +155,20 @@ export function useBookingOptions() {
    hours and everyone else's bookings — which this screen must never see. The
    day card's "times free" and the time picker both read this one list, so
    they cannot disagree. */
-export function useAvailability(doctorId, serviceId) {
+/* `ignoringId` is the appointment being moved, so its own current time does
+   not block the times next to it. */
+export function useAvailability(doctorId, serviceId, ignoringId) {
   /* The answer is stored with the doctor and treatment it was fetched for.
      Comparing that against what is selected now means a previous doctor's
      times are never shown while a new request is still in flight. */
   const [result, setResult] = useState({ key: null, days: [] })
-  const key = doctorId && serviceId ? `${doctorId}:${serviceId}` : null
+  const key = doctorId && serviceId ? `${doctorId}:${serviceId}:${ignoringId ?? ''}` : null
 
   useEffect(() => {
     if (!key) return undefined
     let cancelled = false
-    apiGet(`/doctors/${doctorId}/availability?serviceId=${serviceId}`)
+    const ignoring = ignoringId ? `&ignoring=${ignoringId}` : ''
+    apiGet(`/doctors/${doctorId}/availability?serviceId=${serviceId}${ignoring}`)
       .then((days) => {
         if (!cancelled) setResult({ key, days })
       })
@@ -170,7 +180,7 @@ export function useAvailability(doctorId, serviceId) {
     return () => {
       cancelled = true
     }
-  }, [key, doctorId, serviceId])
+  }, [key, doctorId, serviceId, ignoringId])
 
   return result.key === key ? result.days : []
 }

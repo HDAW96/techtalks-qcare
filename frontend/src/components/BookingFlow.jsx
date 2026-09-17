@@ -2,6 +2,7 @@ import { clinic } from '../data/mock'
 import { useBookingOptions } from '../data/hooks'
 import { formatDay, formatTime } from '../data/format'
 import { BOOKING_STEPS } from './useBookingDraft'
+import SlotPicker from './SlotPicker'
 
 /* `onConfirm` posts the booking to the backend, which has the final say - it
    may refuse a slot someone else has just taken, and `error` carries that back
@@ -40,8 +41,6 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, 
       </div>
     )
   }
-
-  const openTimes = availability.find((d) => d.date === day)?.slots ?? []
 
   return (
     <div className="sheet">
@@ -122,68 +121,17 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, 
               </p>
             </div>
 
-            <p className="cell__label">
-              Day — ticks show times this {service.minutes}-minute visit cannot start
-            </p>
-            <div className="picks" style={{ marginBottom: 32 }}>
-              {availability.map((d) => {
-                const full = d.openCount === 0
-                return (
-                  <button
-                    key={d.date}
-                    type="button"
-                    className="pick"
-                    aria-pressed={day === d.date}
-                    disabled={full}
-                    onClick={() => choose.day(d.date)}
-                  >
-                    <span className="pick__name">{formatDay(d.date)}</span>
-                    <span className="meta">
-                      {full
-                        ? 'Full'
-                        : `${d.openCount} ${d.openCount === 1 ? 'time' : 'times'} free`}
-                    </span>
-                    <span className="slots" aria-hidden="true">
-                      {d.slots.map((s) => (
-                        <span
-                          key={s.time}
-                          className={[
-                            'slot',
-                            s.open ? '' : 'slot--taken',
-                            full ? 'slot--full' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                        />
-                      ))}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {day && (
-              <>
-                <p className="cell__label">Time on {formatDay(day)}</p>
-                <div className="times">
-                  {openTimes.map((s) => (
-                    <button
-                      key={s.time}
-                      type="button"
-                      className="time"
-                      aria-pressed={time === s.time}
-                      disabled={!s.open}
-                      onClick={() => {
-                        choose.time(s.time)
-                        onStep('confirm')
-                      }}
-                    >
-                      {s.time}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <SlotPicker
+              availability={availability}
+              minutes={service.minutes}
+              day={day}
+              time={time}
+              onDay={choose.day}
+              onTime={(t) => {
+                choose.time(t)
+                onStep('confirm')
+              }}
+            />
           </>
         )}
 

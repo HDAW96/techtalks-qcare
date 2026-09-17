@@ -8,6 +8,7 @@ import Mark from '../components/Mark'
 import Cell from '../components/Cell'
 import QrPlaceholder from '../components/QrPlaceholder'
 import BookingFlow from '../components/BookingFlow'
+import RescheduleAppointment from '../components/RescheduleAppointment'
 import { BOOKING_STEPS, useBookingDraft } from '../components/useBookingDraft'
 import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
@@ -63,7 +64,7 @@ function SheetHead({ title, note, right }) {
   )
 }
 
-function AppointmentRows({ items, cancellable }) {
+function AppointmentRows({ items, cancellable, onReschedule }) {
   if (items.length === 0) {
     return (
       <div className="empty">
@@ -90,7 +91,11 @@ function AppointmentRows({ items, cancellable }) {
             />
             {cancellable && (
               <div className="row__actions">
-                <button type="button" className="btn btn--quiet">
+                <button
+                  type="button"
+                  className="btn btn--quiet"
+                  onClick={() => onReschedule(a)}
+                >
                   Reschedule
                 </button>
                 <button type="button" className="btn btn--quiet">
@@ -140,6 +145,27 @@ function PatientDashboardPage() {
   const open = (id, extra = {}) =>
     setParams(id === 'today' ? {} : { section: id, ...extra })
   const openStep = (step) => open('book', { step })
+
+  /* The appointment being moved lives in the URL like the rest of the
+     dashboard. Only an upcoming (still booked) one can be moved. */
+  const [moveNotice, setMoveNotice] = useState(null)
+  const moving =
+    section === 'appointments'
+      ? appointments.upcoming.find((a) => String(a.id) === params.get('move'))
+      : undefined
+  const startMove = (a) => {
+    setMoveNotice(null)
+    open('appointments', { move: String(a.id) })
+    window.scrollTo(0, 0)
+  }
+  const finishMove = (moved) => {
+    setMoveNotice(
+      `${moved.service} moved to ${formatDay(moved.datetime)} at ${formatTime(moved.datetime)}.`,
+    )
+    open('appointments')
+    // The picker is taller than the list, so the confirmation would be off screen.
+    window.scrollTo(0, 0)
+  }
 
   const { yourTicket } = queue
   const { markAllRead } = notifications
@@ -283,6 +309,7 @@ function PatientDashboardPage() {
                 <AppointmentRows
                   items={appointments.upcoming.slice(0, 1)}
                   cancellable
+                  onReschedule={startMove}
                 />
               </div>
             </>
@@ -300,12 +327,27 @@ function PatientDashboardPage() {
             />
           )}
 
-          {section === 'appointments' && (
+          {section === 'appointments' && moving && (
+            <RescheduleAppointment
+              key={moving.id}
+              appointment={moving}
+              onReschedule={appointments.reschedule}
+              onDone={finishMove}
+              onClose={() => open('appointments')}
+            />
+          )}
+
+          {section === 'appointments' && !moving && (
             <div className="sheet">
               <SheetHead
                 title="My appointments"
                 note={`Record ${formatRecordNumber(user.patientId)}`}
               />
+              {moveNotice && (
+                <div className="sheet__body" role="status" style={{ paddingBlock: 16 }}>
+                  <p>{moveNotice}</p>
+                </div>
+              )}
               <div className="tabs">
                 {['upcoming', 'past'].map((t) => (
                   <button
@@ -323,6 +365,7 @@ function PatientDashboardPage() {
               <AppointmentRows
                 items={appointments[tab]}
                 cancellable={tab === 'upcoming'}
+                onReschedule={startMove}
               />
             </div>
           )}
