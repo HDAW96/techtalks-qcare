@@ -5,8 +5,17 @@ import SlotPicker from './SlotPicker'
 
 /* Same doctor and treatment, new time. The server rechecks everything, so a
    time taken while this was open comes back as an error, not a double booking. */
+
+// The most the server will look ahead. People reschedule mostly to postpone,
+// so the booking screen's five days is too short here.
+const RESCHEDULE_DAYS = 30
+
 function RescheduleAppointment({ appointment, onReschedule, onDone, onClose }) {
-  const fetched = useAvailability(appointment.doctorId, appointment.serviceId, appointment.id)
+  const {
+    days: fetched,
+    error: loadError,
+    reload,
+  } = useAvailability(appointment.doctorId, appointment.serviceId, appointment.id, RESCHEDULE_DAYS)
   const currentDay = appointment.datetime.slice(0, 10)
   const currentTime = formatTime(appointment.datetime)
 
@@ -35,11 +44,15 @@ function RescheduleAppointment({ appointment, onReschedule, onDone, onClose }) {
       const moved = await onReschedule(appointment.id, `${day}T${time}`)
       onDone(moved)
     } catch (e) {
-      setError(
-        e.code === 'SLOT_TAKEN'
-          ? 'That time has just been taken. Please choose another.'
-          : e.message || 'Could not move the appointment. Please try again.',
-      )
+      if (e.code === 'SLOT_TAKEN') {
+        // The list on screen is out of date: fetch it again, so the taken
+        // time shows as taken instead of inviting the same click.
+        setTime(null)
+        reload()
+        setError('That time has just been taken. Please choose another.')
+      } else {
+        setError(e.message || 'Could not move the appointment. Please try again.')
+      }
       setSaving(false)
     }
   }
@@ -54,6 +67,21 @@ function RescheduleAppointment({ appointment, onReschedule, onDone, onClose }) {
             {formatDay(appointment.datetime)} at {currentTime}
           </p>
         </div>
+
+        {loadError && (
+          <div
+            className="form-error"
+            role="alert"
+            style={{ display: 'grid', gap: 12, justifyItems: 'start', marginBottom: 24 }}
+          >
+            <p>{loadErrorMessage(loadError)}</p>
+            {loadError.status !== 404 && (
+              <button type="button" className="btn btn--quiet" onClick={reload}>
+                Try again
+              </button>
+            )}
+          </div>
+        )}
 
         <SlotPicker
           availability={availability}
@@ -93,6 +121,18 @@ function RescheduleAppointment({ appointment, onReschedule, onDone, onClose }) {
       </div>
     </div>
   )
+}
+
+/* Loading free times for one appointment can fail in ways booking never
+   meets, and each needs saying: an empty day strip explains nothing. */
+function loadErrorMessage(error) {
+  if (error.status === 404) {
+    return 'This appointment can no longer be moved. It may have been cancelled or already moved.'
+  }
+  if (error.status === 401 || error.status === 403) {
+    return 'Please sign in again to move this appointment.'
+  }
+  return error.message || 'Could not load the free times.'
 }
 
 export default RescheduleAppointment

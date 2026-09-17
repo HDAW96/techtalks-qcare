@@ -18,6 +18,7 @@ import com.example.repository.UserRepository;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -113,9 +114,7 @@ public class BookingService {
 
             List<DayAvailabilityResponse.Slot> slots = new ArrayList<>();
             for (LocalTime start : gridTimes(windows)) {
-                LocalTime end = start.plusMinutes(duration);
-                boolean fits = windows.stream().anyMatch(
-                        w -> !start.isBefore(w.getStartTime()) && !end.isAfter(w.getEndTime()));
+                boolean fits = fitsWorkingHours(windows, start, duration);
                 boolean free = taken.stream().noneMatch(a -> overlaps(
                         date.atTime(start), duration,
                         a.getAppointmentDatetime(), a.getMedicalService().getDurationMinutes()));
@@ -127,7 +126,9 @@ public class BookingService {
         return result;
     }
 
-    @Transactional
+    // READ_COMMITTED: see requireBookable for why the default isolation lets
+    // two bookings for the same time both through.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentResponse book(Integer userId, AppointmentBookingDTO request) {
         Patient patient = patientOf(userId);
 
@@ -156,7 +157,7 @@ public class BookingService {
      * the same doctor and treatment. The new time passes exactly the checks a
      * fresh booking does.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentResponse reschedule(Integer userId, Integer appointmentId, String datetime) {
         Appointment appointment = ownedAppointment(userId, appointmentId);
 
@@ -207,6 +208,8 @@ public class BookingService {
      * Refuses a time that has passed, falls outside the doctor's hours, or
      * overlaps another booking. `ignoringId` is the appointment being moved:
      * it must not count as clashing with its own new time.
+     *
+     * Call it only inside a write transaction, right before saving.
      */
     private void requireBookable(Doctor doctor, MedicalService service, LocalDateTime when,
             Integer ignoringId) {
@@ -218,11 +221,7 @@ public class BookingService {
         int duration = service.getDurationMinutes();
         List<DoctorAvailability> windows = availabilityRepository
                 .findByDoctorAndDayOfWeek(doctor, when.getDayOfWeek().getValue());
-        LocalTime start = when.toLocalTime();
-        LocalTime end = start.plusMinutes(duration);
-        boolean fits = windows.stream().anyMatch(
-                w -> !start.isBefore(w.getStartTime()) && !end.isAfter(w.getEndTime()));
-        if (!fits) {
+        if (!fitsWorkingHours(windows, when.toLocalTime(), duration)) {
             throw new ApiException(HttpStatus.CONFLICT, "OUTSIDE_HOURS",
                     "That doctor is not available then.");
         }
@@ -231,6 +230,19 @@ public class BookingService {
         // (doctor, datetime) would only catch two bookings starting at the same
         // minute, but treatments have length: a 45 minute cleaning at 10:00
         // also blocks 10:30.
+        //
+        // Locking the doctor's row first makes the check and the save that
+        // follows it one step: a second booking for this doctor waits here
+        // until the first one's transaction ends, then sees its appointment.
+        // Without it, two patients clicking the same time at once could both
+        // pass the check.
+        //
+        // The lock alone is not enough on MySQL. Its default isolation
+        // (REPEATABLE READ) reads from a snapshot taken at the transaction's
+        // first query, so the waiting booking would still not see the one it
+        // waited for. Both callers therefore run READ_COMMITTED, where the
+        // query below sees everything committed before it runs.
+        doctorRepository.lockById(doctor.getDoctorId());
         LocalDate date = when.toLocalDate();
         boolean clash = takenForDay(doctor, date, ignoringId).stream()
                 .anyMatch(a -> overlaps(when, duration,
@@ -259,10 +271,32 @@ public class BookingService {
                 if (!times.contains(t)) {
                     times.add(t);
                 }
+                // LocalTime wraps at midnight: 23:30 plus 30 minutes is 00:00,
+                // which is "before" a window ending at 23:59 and would loop forever.
+                if (t.plusMinutes(GRID_MINUTES).isBefore(t)) {
+                    break;
+                }
             }
         }
         times.sort(LocalTime::compareTo);
         return times;
+    }
+
+    /**
+     * The whole treatment fits inside one working window. Checking the end as
+     * well as the start is what stops a 45 minute cleaning at 12:45 when the
+     * clinic closes at 13:00. A treatment that would run past midnight never
+     * fits: LocalTime wraps, so 23:30 plus 45 minutes is 00:15, which would
+     * otherwise pass as "not after" the window's end.
+     */
+    private boolean fitsWorkingHours(List<DoctorAvailability> windows, LocalTime start,
+            int duration) {
+        LocalTime end = start.plusMinutes(duration);
+        if (!end.isAfter(start)) {
+            return false;
+        }
+        return windows.stream().anyMatch(
+                w -> !start.isBefore(w.getStartTime()) && !end.isAfter(w.getEndTime()));
     }
 
     /** Two appointments clash unless one finishes before the other starts. */

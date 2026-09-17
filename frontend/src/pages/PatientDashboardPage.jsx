@@ -131,7 +131,7 @@ function PatientDashboardPage() {
   const booking = useBookingDraft()
   // The server works out free times: it knows the doctor's hours and everyone
   // else's bookings, which this screen must never see.
-  const availability = useAvailability(booking.doctor?.id, booking.service?.id)
+  const { days: availability } = useAvailability(booking.doctor?.id, booking.service?.id)
 
   /* Where the patient is on the dashboard lives in the URL, so a refresh
      keeps it and the browser's Back button steps back through it. */
@@ -146,23 +146,22 @@ function PatientDashboardPage() {
     setParams(id === 'today' ? {} : { section: id, ...extra })
   const openStep = (step) => open('book', { step })
 
-  /* The appointment being moved lives in the URL like the rest of the
-     dashboard. Only an upcoming (still booked) one can be moved. */
-  const [moveNotice, setMoveNotice] = useState(null)
-  const moving =
+  /* The appointment being moved, and the one just moved, live in the URL
+     like the rest of the dashboard. So the confirmation belongs to the page
+     it was shown on: leave My appointments and it does not come back.
+     Only an upcoming (still booked) one can be moved. */
+  const findUpcoming = (param) =>
     section === 'appointments'
-      ? appointments.upcoming.find((a) => String(a.id) === params.get('move'))
+      ? appointments.upcoming.find((a) => String(a.id) === params.get(param))
       : undefined
+  const moving = findUpcoming('move')
+  const justMoved = findUpcoming('moved')
   const startMove = (a) => {
-    setMoveNotice(null)
     open('appointments', { move: String(a.id) })
     window.scrollTo(0, 0)
   }
   const finishMove = (moved) => {
-    setMoveNotice(
-      `${moved.service} moved to ${formatDay(moved.datetime)} at ${formatTime(moved.datetime)}.`,
-    )
-    open('appointments')
+    open('appointments', { moved: String(moved.id) })
     // The picker is taller than the list, so the confirmation would be off screen.
     window.scrollTo(0, 0)
   }
@@ -343,9 +342,12 @@ function PatientDashboardPage() {
                 title="My appointments"
                 note={`Record ${formatRecordNumber(user.patientId)}`}
               />
-              {moveNotice && (
+              {justMoved && (
                 <div className="sheet__body" role="status" style={{ paddingBlock: 16 }}>
-                  <p>{moveNotice}</p>
+                  <p>
+                    {justMoved.service} moved to {formatDay(justMoved.datetime)} at{' '}
+                    {formatTime(justMoved.datetime)}.
+                  </p>
                 </div>
               )}
               <div className="tabs">
