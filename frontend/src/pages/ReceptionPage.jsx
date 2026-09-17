@@ -1,16 +1,21 @@
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Legend from '../components/Legend'
 import QueueDesk from '../components/QueueDesk'
 import QrPlaceholder from '../components/QrPlaceholder'
-import { useDeskQueue, useTodaysDoctors } from '../data/hooks'
+import WalkInForm from '../components/WalkInForm'
+import { useBookingOptions, useDeskQueue, useTodaysDoctors } from '../data/hooks'
 import { clinic } from '../data/mock'
 import '../styles/desk.css'
 
 function ReceptionPage() {
   const today = useTodaysDoctors()
   const { doctors } = today
+  // The treatment list for the walk-in form. Public, and already fetched for
+  // the booking screen, so it costs nothing extra here.
+  const { services } = useBookingOptions()
 
   /* The chosen doctor lives in the URL, so a refresh at a busy desk
      comes back to the same queue instead of a blank screen. */
@@ -21,11 +26,39 @@ function ReceptionPage() {
   const doctor = doctors.find((d) => d.doctorId === doctorId) ?? null
   const queue = useDeskQueue(doctor?.queue?.queueId ?? null)
 
+  const [addingWalkIn, setAddingWalkIn] = useState(false)
+  /* What the server refused, shown above the board. A rejected move is the
+     normal way two receptionists on two screens find out about each other -
+     the chair was taken while this screen still showed it free - so it is a
+     line of text, not an alarm. */
+  const [actionError, setActionError] = useState(null)
+
   /* Opening creates today's queue for that doctor; viewing just selects
      one that is already open. Not being scheduled never blocks either. */
   const openQueue = async (id) => {
-    await today.openQueue(id)
-    choose(id)
+    setActionError(null)
+    try {
+      await today.openQueue(id)
+      choose(id)
+    } catch (error) {
+      setActionError(error.message || 'Could not open that queue.')
+    }
+  }
+
+  /* The board is replaced with whatever the server sends back, so a refused
+     move leaves the screen showing what is true rather than what was pressed. */
+  const setStatus = async (ticketId, status) => {
+    setActionError(null)
+    try {
+      await queue.setStatus(ticketId, status)
+    } catch (error) {
+      setActionError(error.message || 'Could not move that ticket.')
+    }
+  }
+
+  const addWalkIn = async (details) => {
+    await queue.addWalkIn(details)
+    setAddingWalkIn(false)
   }
 
   // One clinic QR per day. Nothing to join until a queue is open.
@@ -44,6 +77,21 @@ function ReceptionPage() {
                 <p className="dash__name">Today&rsquo;s doctors</p>
                 <p className="meta meta--right">{clinic.name}</p>
               </div>
+
+              {today.loading && (
+                <div className="empty" role="status">
+                  <p>Loading today&rsquo;s queues…</p>
+                </div>
+              )}
+
+              {/* A desk with no connection must say so plainly rather than
+                  show an empty list, which reads as "no doctors today". */}
+              {today.error && !today.loading && (
+                <div className="empty">
+                  <p>{today.error.message}</p>
+                  <p className="meta">The queue cannot be worked until this screen reconnects.</p>
+                </div>
+              )}
 
               {doctors.map((d) => (
                 <div key={d.doctorId} className={d.doctorId === doctorId ? 'doc doc--on' : 'doc'}>
@@ -101,18 +149,64 @@ function ReceptionPage() {
                     `${queue.waiting} waiting${queue.updatedAt ? ` · updated ${queue.updatedAt}` : ''}`}
                 </p>
               </div>
-              {queue.sample && <span className="synthetic desk-head__tag">Sample data</span>}
             </div>
+
+            {actionError && (
+              <p className="form-error desk-error" role="alert">
+                {actionError}
+              </p>
+            )}
 
             {doctor?.queue && (
               <>
-                <Legend items={['live', 'wait', 'miss', 'done']} />
-                <QueueDesk entries={queue.entries} chairTaken={queue.chairTaken} onStatus={queue.setStatus} />
-                <div className="sheet__foot desk-foot">
-                  <button type="button" className="btn btn--live">Add walk-in</button>
-                  <button type="button" className="btn">Check in booked patient</button>
-                  <button type="button" className="btn btn--quiet">Find patient</button>
-                </div>
+                {queue.error ? (
+                  <div className="empty">
+                    <p>{queue.error.message}</p>
+                  </div>
+                ) : queue.loading ? (
+                  <div className="empty" role="status">
+                    <p>Loading the queue…</p>
+                  </div>
+                ) : (
+                  <>
+                    <Legend items={['live', 'wait', 'miss', 'done']} />
+                    <QueueDesk
+                      entries={queue.entries}
+                      chairTaken={queue.chairTaken}
+                      onStatus={setStatus}
+                    />
+                  </>
+                )}
+
+                {addingWalkIn ? (
+                  <WalkInForm
+                    services={services}
+                    onAdd={addWalkIn}
+                    onCancel={() => setAddingWalkIn(false)}
+                  />
+                ) : (
+                  <div className="sheet__foot desk-foot">
+                    <button
+                      type="button"
+                      className="btn btn--live"
+                      onClick={() => {
+                        setActionError(null)
+                        setAddingWalkIn(true)
+                      }}
+                    >
+                      Add walk-in
+                    </button>
+                    {/* Not built yet. Shown disabled rather than hidden so the
+                        desk knows the work exists and is coming, and cannot
+                        press something that would silently do nothing. */}
+                    <button type="button" className="btn" disabled title="Not built yet">
+                      Check in booked patient
+                    </button>
+                    <button type="button" className="btn btn--quiet" disabled title="Not built yet">
+                      Find patient
+                    </button>
+                  </div>
+                )}
               </>
             )}
             {doctor && !doctor.queue && (

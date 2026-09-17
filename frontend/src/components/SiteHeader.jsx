@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import Logo from './Logo'
 import { useAuth } from '../auth/useAuth'
+import { HOME_ROUTE_FOR_ROLE, ROLE } from '../constants'
 
 function SiteHeader() {
   const [open, setOpen] = useState(false)
@@ -12,6 +13,11 @@ function SiteHeader() {
   const untilKnown = loading ? { visibility: 'hidden' } : undefined
 
   const close = () => setOpen(false)
+
+  // One header for everyone, so the link has to say where it actually goes.
+  // A receptionist has no patient record to open, and a patient has no desk.
+  const home = user ? (HOME_ROUTE_FOR_ROLE[user.role] ?? '/') : '/'
+  const homeLabel = user?.role === ROLE.RECEPTIONIST ? 'Front desk' : 'My record'
 
   function handleSignOut() {
     close()
@@ -55,8 +61,8 @@ function SiteHeader() {
 
           {user ? (
             <>
-              <NavLink to="/dashboard" onClick={close}>
-                My record
+              <NavLink to={home} onClick={close}>
+                {homeLabel}
               </NavLink>
               <button type="button" className="btn btn--quiet" onClick={handleSignOut}>
                 Sign out

@@ -38,7 +38,16 @@ function App() {
           </RequireAuth>
         }
       />
-      <Route path="/reception" element={<ReceptionPage />} />
+      {/* The desk sees every patient's name and phone number, so this is
+          gated on the role, not merely on being signed in. */}
+      <Route
+        path="/reception"
+        element={
+          <RequireAuth roles={[ROLE.RECEPTIONIST]}>
+            <ReceptionPage />
+          </RequireAuth>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
