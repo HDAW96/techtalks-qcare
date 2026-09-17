@@ -4,7 +4,15 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "queue")
+@Table(
+        name = "queue",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_queue_doctor_date",
+                        columnNames = {"doctor_id", "queue_date"}
+                )
+        }
+)
 public class Queue {
 
     @Id
@@ -27,6 +35,17 @@ public class Queue {
     private String status = "OPEN";
 
     public Queue() {
+    }
+
+    public Queue(
+            Doctor doctor,
+            Receptionist receptionist,
+            LocalDate queueDate
+    ) {
+        this.doctor = doctor;
+        this.receptionist = receptionist;
+        this.queueDate = queueDate;
+        this.status = "OPEN";
     }
 
     public Integer getQueueId() {
@@ -67,12 +86,5 @@ public class Queue {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public Queue(Doctor doctor, Receptionist receptionist, LocalDate queueDate) {
-        this.doctor = doctor;
-        this.receptionist = receptionist;
-        this.queueDate = queueDate;
-        this.status = "OPEN";
     }
 }
