@@ -7,15 +7,18 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
 
-    Optional<User> findByPhoneNumberAndFullName(
-            String phoneNumber,
-            String fullName
-    );
+    /**
+     * Sign-in lookup. The phone alone is not unique because a family shares
+     * one number, so the name is part of the key.
+     */
+    Optional<User> findByPhoneNumberAndFullName(String phoneNumber, String fullName);
 
-    boolean existsByPhoneNumberAndFullName(
-            String phoneNumber,
-            String fullName
-    );
+    boolean existsByPhoneNumberAndFullName(String phoneNumber, String fullName);
 
+    /**
+     * Used by the seeder to decide whether the receptionist accounts already
+     * exist. They need their own check because the doctor block only runs on
+     * an empty database.
+     */
     boolean existsByRole(String role);
 }
