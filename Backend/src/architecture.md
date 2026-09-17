@@ -29,5 +29,26 @@ The system logic is decoupled into distinct packages inside `src/main/java`:
 * **`util/`**: Helper methods, date/time transformers, and response formatter utilities.
 
 
- ### Recommendations
- Implement `QueueService` to manage real-time queue ticket statuses in the `service` package.
+### The walk-in queue
+
+`QueueService` holds the queue rules, and `QueueController` exposes them under
+`/api/queues`. Two rules shape the rest:
+
+* **One doctor, one chair.** At most one ticket in a queue may be `IN_CHAIR`.
+* **The server decides the order.** Positions and waiting times are worked out
+  on the server and sent down, never calculated in the browser. Two
+  receptionists on two screens must not be able to disagree about who is next.
+
+Only these moves are allowed, and any other is refused:
+
+`WAITING → IN_CHAIR`, `IN_CHAIR → DONE`, `WAITING → SKIPPED`, `SKIPPED → WAITING`
+
+Every endpoint under `/api/queues` answers with patients' names and phone
+numbers, so the whole path is restricted to `ROLE_RECEPTIONIST` in
+`SecurityConfig`.
+
+### Recommendations
+
+The patient-facing queue board still needs an endpoint of its own. It cannot
+reuse the desk's: a board read in a waiting room must carry ticket numbers
+only, never the names sitting behind them.
