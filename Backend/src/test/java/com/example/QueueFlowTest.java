@@ -124,11 +124,11 @@ class QueueFlowTest {
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"fullName":"Hiba Rahal","phoneNumber":"03998877","password":"a-long-password"}
+                        {"fullName":"Hiba Rahal","phoneNumber":"03998877","password":"A-long-password1"}
                         """))
                 .andExpect(status().isCreated());
 
-        String token = signIn("03998877", "Hiba Rahal", "a-long-password").path("token").asText();
+        String token = signIn("03998877", "Hiba Rahal", "A-long-password1").path("token").asText();
 
         // Every queue endpoint carries patients' names and phone numbers, so
         // being signed in is not enough to read one.
@@ -196,9 +196,9 @@ class QueueFlowTest {
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(java.util.Map.of(
-                        "fullName", fullName, "phoneNumber", phone, "password", "a-long-password"))))
+                        "fullName", fullName, "phoneNumber", phone, "password", "A-long-password1"))))
                 .andExpect(status().isCreated());
-        return signIn(phone, fullName, "a-long-password").path("token").asText();
+        return signIn(phone, fullName, "A-long-password1").path("token").asText();
     }
 
     // ---- helpers ----
