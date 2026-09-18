@@ -42,4 +42,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findBookedForDoctorBetween(@Param("doctor") Doctor doctor,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    /**
+     * Every appointment in the clinic between two moments, whatever its
+     * status, for the reception desk. The patient is fetched too, because the
+     * desk needs to know who each appointment is for.
+     */
+    @Query("""
+            select a from Appointment a
+            join fetch a.patient
+            join fetch a.doctor d
+            join fetch d.user
+            join fetch a.medicalService
+            where a.appointmentDatetime >= :from
+              and a.appointmentDatetime < :to
+            order by a.appointmentDatetime, d.doctorId
+            """)
+    List<Appointment> findAllBetween(@Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }

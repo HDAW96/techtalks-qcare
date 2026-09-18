@@ -18,9 +18,9 @@ import java.util.List;
  * shows times before anyone signs in. It exposes only whether a time is free,
  * never who holds the others.
  *
- * One part needs sign-in: `ignoring`, used when a patient moves an
- * appointment, is accepted only from that appointment's owner (401 when
- * signed out, 404 for anyone else's). Otherwise anyone could pass another
+ * One part needs sign-in: `ignoring`, used when an appointment is being
+ * moved, is accepted only from its patient or from reception (401 when
+ * signed out, 404 for anyone else). Otherwise anyone could pass another
  * patient's appointment id and see which time it frees up.
  */
 @RestController
