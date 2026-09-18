@@ -99,6 +99,53 @@ export function useAppointments() {
   }, [items, loading, error, book, reschedule])
 }
 
+/* Every appointment in the clinic on one day, for the reception desk.
+   Real data: GET /api/appointments?date=YYYY-MM-DD, reception only (anyone
+   else gets 403, which `error` carries). Each row is a patient's appointment
+   plus `patientId`, `patientName` and `phoneNumber`.
+
+   `reschedule` is the same call a patient makes; the server lets reception
+   move anyone's appointment. */
+export function useDayAppointments(date) {
+  /* Stored with the day it was fetched for, so another day's rows never
+     show while the new day is loading. Same idea as `useAvailability`. */
+  const [result, setResult] = useState({ key: null, items: [], error: null })
+  const [reloads, setReloads] = useState(0)
+  const key = `${date}:${reloads}`
+
+  useEffect(() => {
+    let cancelled = false
+    apiGet(`/appointments?date=${date}`)
+      .then((items) => {
+        if (!cancelled) setResult({ key, items, error: null })
+      })
+      .catch((error) => {
+        if (!cancelled) setResult({ key, items: [], error })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [key, date])
+
+  const reload = useCallback(() => setReloads((n) => n + 1), [])
+
+  const reschedule = useCallback(async (id, datetime) => {
+    const moved = await apiPatch(`/appointments/${id}`, { datetime })
+    setReloads((n) => n + 1)
+    return moved
+  }, [])
+
+  // A refetch of the same day keeps its rows on screen until the new ones arrive.
+  const sameDay = result.key?.startsWith(`${date}:`)
+  return {
+    items: sameDay ? result.items : [],
+    loading: result.key !== key,
+    error: sameDay ? result.error : null,
+    reload,
+    reschedule,
+  }
+}
+
 /* SAMPLE DATA — the ERD has no notifications table, so there is nothing to
    read these from. They stay local until the team adds one. */
 export function useNotifications() {

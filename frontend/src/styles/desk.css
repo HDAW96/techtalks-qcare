@@ -71,3 +71,6 @@
 
 .desk-qr { text-align: center; }
 .desk-qr .qr { width: 180px; height: 180px; margin-bottom: 12px; }
+
+/* The day buttons drop below the heading on a phone instead of pushing the page wide. */
+.desk-appts__head { flex-wrap: wrap; row-gap: 12px; }
