@@ -7,7 +7,7 @@ import ReceptionPage from './pages/ReceptionPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RequireAuth from './auth/RequireAuth'
 import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
-import { ROLE } from './constants'
+import { ROUTE_ROLES } from './constants'
 import './App.css'
 
 function App() {
@@ -33,12 +33,21 @@ function App() {
       <Route
         path="/dashboard"
         element={
-          <RequireAuth roles={[ROLE.PATIENT]}>
+          <RequireAuth roles={ROUTE_ROLES['/dashboard']}>
             <PatientDashboardPage />
           </RequireAuth>
         }
       />
-      <Route path="/reception" element={<ReceptionPage />} />
+      {/* The desk sees every patient's name and phone number, so this is
+          gated on the role, not merely on being signed in. */}
+      <Route
+        path="/reception"
+        element={
+          <RequireAuth roles={ROUTE_ROLES['/reception']}>
+            <ReceptionPage />
+          </RequireAuth>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

@@ -62,6 +62,15 @@ public class QueueTicket {
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt = LocalDateTime.now();
 
+    /**
+     * When this person was called into the chair. Null until then.
+     * The waiting time shown to everyone behind them is only honest if it
+     * counts down: without this, a treatment already half over would still be
+     * charged to the queue at its full length.
+     */
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
     public QueueTicket() {
     }
 
@@ -160,5 +169,13 @@ public class QueueTicket {
 
     public void setJoinedAt(LocalDateTime joinedAt) {
         this.joinedAt = joinedAt;
+    }
+
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
     }
 }

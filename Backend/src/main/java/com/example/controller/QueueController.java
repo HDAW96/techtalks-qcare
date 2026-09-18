@@ -1,0 +1,89 @@
+package com.example.controller;
+
+import com.example.dto.DoctorQueueResponse;
+import com.example.dto.OpenQueueDTO;
+import com.example.dto.QueueTicketResponse;
+import com.example.dto.QueueTicketsResponse;
+import com.example.dto.QueueTodayResponse;
+import com.example.dto.TicketStatusDTO;
+import com.example.dto.WalkInDTO;
+import com.example.service.QueueService;
+import com.example.web.ApiException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * The front desk's queue.
+ *
+ * Every endpoint here carries patients' names and phone numbers, so the whole
+ * controller is receptionist-only - see SecurityConfig. The patient-facing
+ * board, when it is built, needs its own endpoint returning ticket numbers
+ * alone.
+ */
+@RestController
+@RequestMapping("/api/queues")
+public class QueueController {
+
+    private final QueueService queueService;
+
+    public QueueController(QueueService queueService) {
+        this.queueService = queueService;
+    }
+
+    /** Today's doctors, the clinic QR, and which queues are open. */
+    @GetMapping("/today")
+    public QueueTodayResponse today() {
+        return queueService.today();
+    }
+
+    @PostMapping
+    public ResponseEntity<DoctorQueueResponse> open(Authentication authentication,
+            @RequestBody OpenQueueDTO request) {
+        DoctorQueueResponse opened = queueService.openQueue(
+                signedInUserId(authentication), request.getDoctorId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(opened);
+    }
+
+    @GetMapping("/{queueId}/tickets")
+    public QueueTicketsResponse tickets(@PathVariable Integer queueId) {
+        return queueService.tickets(queueId);
+    }
+
+    @PostMapping("/{queueId}/tickets")
+    public ResponseEntity<QueueTicketResponse> addWalkIn(@PathVariable Integer queueId,
+            @RequestBody WalkInDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(queueService.addWalkIn(queueId, request));
+    }
+
+    /**
+     * Call in, skip, finish or bring back. Returns the whole board rather than
+     * the one ticket, because moving one person changes the waiting time of
+     * everyone behind them.
+     */
+    @PatchMapping("/{queueId}/tickets/{ticketId}")
+    public QueueTicketsResponse setStatus(@PathVariable Integer queueId,
+            @PathVariable Integer ticketId,
+            @RequestBody TicketStatusDTO request) {
+        return queueService.changeStatus(queueId, ticketId, request.getStatus());
+    }
+
+    /**
+     * The user id comes from the verified token, never from the request body,
+     * so a caller cannot open a queue in someone else's name.
+     */
+    private Integer signedInUserId(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Integer userId)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Please sign in again.");
+        }
+        return userId;
+    }
+}

@@ -13,7 +13,8 @@
             "driver": "MySQL",
             "name": "Local instance MySQL80",
             "database": "qcare_db",
-            "username": "root"
+            "username": "root",
+            "askForPassword": true
         }
     ]
 }
