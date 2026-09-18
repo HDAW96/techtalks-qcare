@@ -30,8 +30,20 @@ export const ROLE = {
    falls back to the patient record until it is. */
 export const HOME_ROUTE_FOR_ROLE = {
   [ROLE.PATIENT]: '/dashboard',
-  [ROLE.DOCTOR]: '/dashboard',
+  // No doctor screen exists yet. The home page is honest about that; the
+  // patient dashboard would only refuse them.
+  [ROLE.DOCTOR]: '/',
   [ROLE.RECEPTIONIST]: '/reception',
+}
+
+/* Which roles may open each gated route. RequireAuth enforces it, and the
+   post-sign-in redirect consults it, so signing in can never send someone
+   back to a page they have just been turned away from: sign out at the desk,
+   sign back in as a patient, and you must land on your record, not on a
+   refusal. Routes not listed here are open to any signed-in user. */
+export const ROUTE_ROLES = {
+  '/dashboard': [ROLE.PATIENT],
+  '/reception': [ROLE.RECEPTIONIST],
 }
 
 /* Maps a backend status onto the four marks the UI legend defines

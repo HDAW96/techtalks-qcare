@@ -16,8 +16,10 @@ function SiteHeader() {
 
   // One header for everyone, so the link has to say where it actually goes.
   // A receptionist has no patient record to open, and a patient has no desk.
+  // A doctor has no screen at all yet, so they get no link rather than one
+  // that leads somewhere that refuses them.
   const home = user ? (HOME_ROUTE_FOR_ROLE[user.role] ?? '/') : '/'
-  const homeLabel = user?.role === ROLE.RECEPTIONIST ? 'Front desk' : 'My record'
+  const homeLabel = { [ROLE.PATIENT]: 'My record', [ROLE.RECEPTIONIST]: 'Front desk' }[user?.role]
 
   function handleSignOut() {
     close()
@@ -61,9 +63,11 @@ function SiteHeader() {
 
           {user ? (
             <>
-              <NavLink to={home} onClick={close}>
-                {homeLabel}
-              </NavLink>
+              {homeLabel && (
+                <NavLink to={home} onClick={close}>
+                  {homeLabel}
+                </NavLink>
+              )}
               <button type="button" className="btn btn--quiet" onClick={handleSignOut}>
                 Sign out
               </button>
