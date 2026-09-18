@@ -56,21 +56,21 @@ public class AuthService {
                     "Your password must be at least 8 characters.");
         }
 
-         if (!password.matches(".*[A-Z].*")) {
-           throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
-                    "Your password must contain at least one uppercase letters."); 
-         } 
-        
-        if (!password.matches(".*[a-z].*")) {
-          throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASEE",
-                    "Your password must contain at least one lowercase letters."); 
+        // The same three rules the register form checks before submitting
+        // (RegisterPage.jsx), so the form and the server never disagree.
+        if (!password.matches(".*[A-Z].*")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
+                    "Your password must contain at least one uppercase letter.");
         }
-                    
+        if (!password.matches(".*[a-z].*")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASE",
+                    "Your password must contain at least one lowercase letter.");
+        }
         if (!password.matches(".*[^a-zA-Z0-9].*")) {
-          throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
-                    "Your password must contain at least one special charecter."); 
-        }   
-        
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
+                    "Your password must contain at least one special character.");
+        }
+
         if (userRepository.existsByPhoneNumberAndFullName(phone, fullName)) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
                     "An account already exists for this name and phone number. Try signing in.");
