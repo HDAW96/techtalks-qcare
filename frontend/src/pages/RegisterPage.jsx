@@ -9,6 +9,18 @@ import { isValidPhone } from '../phone'
 
 const MIN_PASSWORD = 8
 
+/* The first rule the password breaks, or null once it meets them all. The
+   same four rules AuthService.register enforces, checked here so the button
+   waits for a password the server will accept instead of failing after the
+   press. */
+function passwordProblem(password) {
+  if (password.length < MIN_PASSWORD) return `At least ${MIN_PASSWORD} characters`
+  if (!/[A-Z]/.test(password)) return 'Add at least one uppercase letter'
+  if (!/[a-z]/.test(password)) return 'Add at least one lowercase letter'
+  if (!/[^a-zA-Z0-9]/.test(password)) return 'Add at least one special character, for example ! or -'
+  return null
+}
+
 /* An account is a phone number, a full name and a password. There is no email:
    the USERS table does not have one. The name is part of the identity rather
    than a label, because a family shares one phone number and each of them gets
@@ -40,10 +52,7 @@ function RegisterPage() {
       touched.phone && !isValidPhone(form.phone)
         ? 'Enter a Lebanese number, for example 03 123456'
         : undefined,
-    password:
-      touched.password && form.password.length < MIN_PASSWORD
-        ? `At least ${MIN_PASSWORD} characters`
-        : undefined,
+    password: (touched.password && passwordProblem(form.password)) || undefined,
     confirm:
       form.confirm !== '' && form.confirm !== form.password
         ? 'The two passwords do not match yet'
@@ -53,7 +62,7 @@ function RegisterPage() {
   const ready =
     form.name.trim() !== '' &&
     isValidPhone(form.phone) &&
-    form.password.length >= MIN_PASSWORD &&
+    passwordProblem(form.password) === null &&
     form.confirm === form.password
 
   async function handleSubmit(event) {
@@ -134,7 +143,7 @@ function RegisterPage() {
                     label="Password"
                     type="password"
                     autoComplete="new-password"
-                    note={`At least ${MIN_PASSWORD} characters`}
+                    note={`At least ${MIN_PASSWORD} characters including 1 uppercase, 1 lowercase and 1 special character.`}
                     value={form.password}
                     disabled={submitting}
                     error={errors.password}
