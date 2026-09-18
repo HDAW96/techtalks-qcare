@@ -55,6 +55,22 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_SHORT",
                     "Your password must be at least 8 characters.");
         }
+
+         if (!password.matches(".*[A-Z].*")) {
+           throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
+                    "Your password must contain at least one uppercase letters."); 
+         } 
+        
+        if (!password.matches(".*[a-z].*")) {
+          throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASEE",
+                    "Your password must contain at least one lowercase letters."); 
+        }
+                    
+        if (!password.matches(".*[^a-zA-Z0-9].*")) {
+          throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
+                    "Your password must contain at least one special charecter."); 
+        }   
+        
         if (userRepository.existsByPhoneNumberAndFullName(phone, fullName)) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
                     "An account already exists for this name and phone number. Try signing in.");
