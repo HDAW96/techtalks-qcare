@@ -159,14 +159,15 @@ There is one sign-in form for everyone. The role on the account decides where
 it takes you: a patient lands on their record, a receptionist lands on the
 front desk at `/reception`.
 
-Registering online always creates a patient, so the first desk account cannot
-be made through the app. An empty database is seeded with one:
+Registering online always creates a patient, so a desk account cannot be made
+through the app. The seeder creates two, and unlike the doctors it checks for
+them separately - a database that already has doctors would otherwise skip
+them:
 
-| | |
-| :--- | :--- |
-| Phone | `03400010` |
-| Full name | `Lara Khoury` |
-| Password | `changeme123` |
+| Phone | Full name | Password |
+| :--- | :--- | :--- |
+| `03400009` | `Reception Desk One` | `changeme123` |
+| `03400010` | `Reception Desk Two` | `changeme123` |
 
-That is a development password on a development database. It is flagged
+That is a development password on a development database. Both are flagged
 `must_change_password` and must never be relied on anywhere else.
