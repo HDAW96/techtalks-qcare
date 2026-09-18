@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { notifications as sampleNotifications, queue, deskToday, deskTickets } from './mock'
-import { apiGet, apiPost } from '../api/client'
+import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
 /* The one place screens get clinic data from.
@@ -77,6 +77,12 @@ export function useAppointments() {
     return created
   }, [])
 
+  const reschedule = useCallback(async (id, datetime) => {
+    const moved = await apiPatch(`/appointments/${id}`, { datetime })
+    setReloads((n) => n + 1)
+    return moved
+  }, [])
+
   return useMemo(() => {
     const byDate = [...items].sort((a, b) => a.datetime.localeCompare(b.datetime))
     const isUpcoming = (a) => a.status === APPOINTMENT_STATUS.BOOKED
@@ -88,8 +94,9 @@ export function useAppointments() {
       loading,
       error,
       book,
+      reschedule,
     }
-  }, [items, loading, error, book])
+  }, [items, loading, error, book, reschedule])
 }
 
 /* SAMPLE DATA — the ERD has no notifications table, so there is nothing to
@@ -148,31 +155,48 @@ export function useBookingOptions() {
    hours and everyone else's bookings — which this screen must never see. The
    day card's "times free" and the time picker both read this one list, so
    they cannot disagree. */
-export function useAvailability(doctorId, serviceId) {
-  /* The answer is stored with the doctor and treatment it was fetched for.
-     Comparing that against what is selected now means a previous doctor's
-     times are never shown while a new request is still in flight. */
-  const [result, setResult] = useState({ key: null, days: [] })
-  const key = doctorId && serviceId ? `${doctorId}:${serviceId}` : null
+/* `ignoringId` is the appointment being moved, so its own current time does
+   not block the times next to it. `days` asks for a longer window than the
+   server's default five (it allows up to 30).
+
+   Returns `{ days, error, reload }`. `reload` asks again, for when the server
+   has just said a time shown as free is taken. */
+export function useAvailability(doctorId, serviceId, ignoringId, days) {
+  /* The answer is stored with the request it was fetched for. Comparing that
+     against what is selected now means a previous doctor's times are never
+     shown while a new request is still in flight. */
+  const [result, setResult] = useState({ key: null, days: [], error: null })
+  const [reloads, setReloads] = useState(0)
+  const key =
+    doctorId && serviceId
+      ? `${doctorId}:${serviceId}:${ignoringId ?? ''}:${days ?? ''}:${reloads}`
+      : null
 
   useEffect(() => {
     if (!key) return undefined
     let cancelled = false
-    apiGet(`/doctors/${doctorId}/availability?serviceId=${serviceId}`)
-      .then((days) => {
-        if (!cancelled) setResult({ key, days })
+    const ignoring = ignoringId ? `&ignoring=${ignoringId}` : ''
+    const span = days ? `&days=${days}` : ''
+    apiGet(`/doctors/${doctorId}/availability?serviceId=${serviceId}${ignoring}${span}`)
+      .then((list) => {
+        if (!cancelled) setResult({ key, days: list, error: null })
       })
-      .catch(() => {
-        // An unreachable server leaves no times open, which is the honest
-        // thing to show: nothing here can be booked right now.
-        if (!cancelled) setResult({ key, days: [] })
+      .catch((error) => {
+        // No times are open either way. Booking treats that as the honest
+        // answer; rescheduling reads `error` too, because asking about one
+        // appointment can fail in ways booking cannot (not yours, gone).
+        if (!cancelled) setResult({ key, days: [], error })
       })
     return () => {
       cancelled = true
     }
-  }, [key, doctorId, serviceId])
+  }, [key, doctorId, serviceId, ignoringId, days])
 
-  return result.key === key ? result.days : []
+  const reload = useCallback(() => setReloads((n) => n + 1), [])
+
+  return result.key === key
+    ? { days: result.days, error: result.error, reload }
+    : { days: [], error: null, reload }
 }
 
 
