@@ -34,10 +34,16 @@ public class QueueTicketResponse {
     public QueueTicketResponse() {
     }
 
-    public static QueueTicketResponse of(QueueTicket ticket, Integer position, Integer etaMinutes) {
+    /**
+     * @param prefix this doctor's label prefix, e.g. "R" or "K" - see
+     *               QueueService.ticketPrefixes. Never hard-coded here: two
+     *               doctors must never be shown with the same prefix.
+     */
+    public static QueueTicketResponse of(QueueTicket ticket, Integer position, Integer etaMinutes,
+            String prefix) {
         QueueTicketResponse dto = new QueueTicketResponse();
         dto.ticketId = ticket.getTicketId();
-        dto.ticket = "R-" + ticket.getTicketNumber();
+        dto.ticket = prefix + "-" + ticket.getTicketNumber();
         dto.patientId = ticket.getPatient().getPatientId();
         dto.patientName = ticket.getPatient().getFullName();
         dto.phoneNumber = ticket.getPatient().getPhoneNumber();

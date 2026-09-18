@@ -25,6 +25,7 @@ import com.example.util.PhoneNumbers;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -33,6 +34,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -174,8 +176,17 @@ public class QueueService {
      * A returning walk-in must be found rather than inserted again: the clinic
      * knows them by phone plus name, because a family shares one number.
      */
-    @Transactional
+    // READ_COMMITTED: see QueueRepository.lockById - the lock alone is not
+    // enough on MySQL's default isolation (REPEATABLE READ), which would
+    // still read the ticket-number and chair counts from a snapshot taken
+    // before the wait. Same pattern as BookingService.book/reschedule.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public QueueTicketResponse addWalkIn(Integer queueId, WalkInDTO request) {
+        // Locked first, and the transaction's only query against this queue's
+        // row until it commits: two walk-ins posted at the same instant now
+        // queue up here instead of both reading the same "highest ticket
+        // number" and both trying to save it.
+        queueRepository.lockById(queueId);
         Queue queue = queueOrThrow(queueId);
         if (!"OPEN".equals(queue.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "QUEUE_CLOSED",
@@ -216,15 +227,19 @@ public class QueueService {
 
         // Read the board back so the new row carries the same position and
         // waiting time everyone else on it was just given.
+        String prefix = ticketPrefixes().getOrDefault(queue.getDoctor().getDoctorId(), "R");
         return board(queue).stream()
                 .filter(row -> row.getTicketId().equals(ticket.getTicketId()))
                 .findFirst()
-                .orElseGet(() -> QueueTicketResponse.of(ticket, null, null));
+                .orElseGet(() -> QueueTicketResponse.of(ticket, null, null, prefix));
     }
 
     /** Call in, skip, finish, or bring back - whichever the desk pressed. */
-    @Transactional
+    // READ_COMMITTED for the same reason as addWalkIn: the lock alone does
+    // not stop two "call in" requests both reading zero people in the chair.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public QueueTicketsResponse changeStatus(Integer queueId, Integer ticketId, String wanted) {
+        queueRepository.lockById(queueId);
         Queue queue = queueOrThrow(queueId);
         QueueTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "TICKET_NOT_FOUND",
@@ -284,21 +299,68 @@ public class QueueService {
                 .map(QueueService::minutesRemaining)
                 .orElse(0);
 
+        String prefix = ticketPrefixes().getOrDefault(queue.getDoctor().getDoctorId(), "R");
+
         List<QueueTicketResponse> board = new ArrayList<>();
         int place = 0;
         for (QueueTicket ticket : tickets) {
             if (IN_CHAIR.equals(ticket.getStatus())) {
                 // In the chair now: a waiting time would mean nothing.
-                board.add(QueueTicketResponse.of(ticket, place++, null));
+                board.add(QueueTicketResponse.of(ticket, place++, null, prefix));
             } else if (WAITING.equals(ticket.getStatus())) {
-                board.add(QueueTicketResponse.of(ticket, place++, minutesAhead));
+                board.add(QueueTicketResponse.of(ticket, place++, minutesAhead, prefix));
                 minutesAhead += ticket.getMedicalService().getDurationMinutes();
             } else {
                 // Skipped or finished: off the line, so neither a place nor a wait.
-                board.add(QueueTicketResponse.of(ticket, null, null));
+                board.add(QueueTicketResponse.of(ticket, null, null, prefix));
             }
         }
         return board;
+    }
+
+    /**
+     * Each doctor's label prefix, worked out across every doctor at once so a
+     * clash between two first names is caught rather than shown as the same
+     * letter on two boards. One letter by default (Rania, Karim -> R, K);
+     * when two doctors' first names start the same way, both grow another
+     * letter (Rania, Rami -> RA, RI). Compared case-insensitively.
+     */
+    private Map<Integer, String> ticketPrefixes() {
+        List<Doctor> doctors = doctorRepository.findAll();
+        Map<Integer, String> prefixes = new LinkedHashMap<>();
+        for (Doctor doctor : doctors) {
+            String firstName = firstNameOf(doctor);
+            int length = 1;
+            while (true) {
+                String candidate = firstName.substring(0, Math.min(length, firstName.length()))
+                        .toUpperCase();
+                boolean clashes = doctors.stream()
+                        .filter(other -> !other.getDoctorId().equals(doctor.getDoctorId()))
+                        .anyMatch(other -> firstNameOf(other).toUpperCase().startsWith(candidate));
+                if (!clashes || length >= firstName.length()) {
+                    prefixes.put(doctor.getDoctorId(), candidate);
+                    break;
+                }
+                length++;
+            }
+        }
+        return prefixes;
+    }
+
+    /**
+     * The name the label is built from, e.g. "Rania" out of "Dr. Rania
+     * Haddad" - DataSeeder gives every doctor a "Dr." title, and a prefix
+     * built from that would label every ticket "D-..." instead of "R-...".
+     */
+    private static String firstNameOf(Doctor doctor) {
+        String[] words = doctor.getUser().getFullName().trim().split("\\s+");
+        for (String word : words) {
+            String bare = word.replace(".", "");
+            if (!bare.equalsIgnoreCase("Dr") && !bare.isEmpty()) {
+                return bare;
+            }
+        }
+        return words[0];
     }
 
     /** How much of the treatment in the chair is left, never below zero. */
