@@ -145,7 +145,29 @@ on a screen's appearance; nothing is saved anywhere.
 | Doctors and treatments | Real — from the database |
 | Free times and booking | Real — the server works out the slots |
 | A patient's appointments | Real |
-| Walk-in queue | **Sample data** — endpoints not built yet |
+| The desk's walk-in queue | Real — open a queue, add walk-ins, call in, skip, finish |
+| Receptionist sign-in and dashboard | Real — the same sign-in form, at `/reception` |
+| Patient-facing queue board | **Sample data** — the desk endpoints carry names, so the public board needs its own |
 | Notifications | **Sample data** — no table exists in the ERD yet |
 | Cancel / reschedule | Buttons are present but do nothing yet |
-| Receptionist and doctor screens | Not built |
+| Check in booked patient / Find patient | Shown disabled at the desk — not built yet |
+| Doctor screens | Not built |
+
+### Signing in as the receptionist
+
+There is one sign-in form for everyone. The role on the account decides where
+it takes you: a patient lands on their record, a receptionist lands on the
+front desk at `/reception`.
+
+Registering online always creates a patient, so a desk account cannot be made
+through the app. The seeder creates two, and unlike the doctors it checks for
+them separately - a database that already has doctors would otherwise skip
+them:
+
+| Phone | Full name | Password |
+| :--- | :--- | :--- |
+| `03400009` | `Reception Desk One` | `changeme123` |
+| `03400010` | `Reception Desk Two` | `changeme123` |
+
+That is a development password on a development database. Both are flagged
+`must_change_password` and must never be relied on anywhere else.

@@ -17,6 +17,10 @@ public class Receptionist {
     public Receptionist() {
     }
 
+    public Receptionist(User user) {
+        this.user = user;
+    }
+
     public Integer getReceptionistId() {
         return receptionistId;
     }

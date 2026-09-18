@@ -9,7 +9,12 @@ import { isValidPhone } from '../phone'
 
 /* Sign-in is phone number + full name + password. A family shares one phone
    number, so the number alone does not say which of them is signing in — the
-   backend looks up the pair. */
+   backend looks up the pair.
+
+   One form for everyone. The account carries the role, so a receptionist signs
+   in here exactly as a patient does and RedirectIfSignedIn sends them to the
+   desk instead of to a patient record. A separate staff login would be a
+   second thing to keep correct for no gain. */
 function LoginPage() {
   const [phone, setPhone] = useState('')
   const [fullName, setFullName] = useState('')
@@ -63,7 +68,7 @@ function LoginPage() {
                 <p className="dash__name">{clinic.name}</p>
                 <p className="meta">{clinic.area}</p>
               </div>
-              <p className="meta meta--right">Patient access</p>
+              <p className="meta meta--right">Patients and staff</p>
             </div>
 
             <div className="sheet__body">

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { notifications as sampleNotifications, queue, deskToday, deskTickets } from './mock'
+import { notifications as sampleNotifications, queue } from './mock'
 import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
 /* The one place screens get clinic data from.
 
-   Sign-in, doctors, treatments, free times and appointments now come from the
-   backend. The queue and notifications still read the sample data in mock.js:
-   the queue endpoints are not built yet, and notifications have no table in
-   the ERD at all, so there is nothing to read them from. Both are marked
-   below so nobody mistakes sample data for real. */
+   Sign-in, doctors, treatments, free times, appointments and the desk's queue
+   now come from the backend. Two things are still sample data from mock.js:
+   the patient-facing queue board, which has no endpoint of its own yet (the
+   desk endpoints carry names and are receptionist-only), and notifications,
+   which have no table in the ERD at all. Both are marked below so nobody
+   mistakes sample data for real. */
 
 /* The walk-in queue. SAMPLE DATA — no queue endpoints exist yet.
    Pass the signed-in patient's id to mark their own ticket as `you`; without
@@ -83,6 +84,14 @@ export function useAppointments() {
     return moved
   }, [])
 
+  /* Posts and refetches, like `book` and `reschedule`: the appointment moves
+     from upcoming to past, and the list has to be re-read to show that. */
+  const cancel = useCallback(async (id) => {
+    const cancelled = await apiPost(`/appointments/${id}/cancel`)
+    setReloads((n) => n + 1)
+    return cancelled
+  }, [])
+
   return useMemo(() => {
     const byDate = [...items].sort((a, b) => a.datetime.localeCompare(b.datetime))
     const isUpcoming = (a) => a.status === APPOINTMENT_STATUS.BOOKED
@@ -95,8 +104,9 @@ export function useAppointments() {
       error,
       book,
       reschedule,
+      cancel,
     }
-  }, [items, loading, error, book, reschedule])
+  }, [items, loading, error, book, reschedule, cancel])
 }
 
 /* Every appointment in the clinic on one day, for the reception desk.
@@ -247,71 +257,127 @@ export function useAvailability(doctorId, serviceId, ignoringId, days) {
 }
 
 
-/* ── DESK ───────────────────────────────────────────────────────────
-   SAMPLE DATA. No queue endpoints exist yet. When they do, only the
-   bodies below change: the screens read these return values, not mock. */
+/* ── DESK ─────────────────────────────────────────────
+   Real, against /api/queues. Every endpoint below is receptionist-only, so
+   these hooks are for the desk screens and nothing else.
+
+   The pattern throughout: an action posts, and the screen is redrawn from what
+   the server sends back. Never from what the button assumed would happen. Two
+   receptionists work the same queue from two screens, and the one who pressed
+   the button is not automatically right about the result. */
+
+// Shared empty lists, so an empty result does not look "changed" every render.
+const NO_DOCTORS = []
+const NO_TICKETS = []
 
 /* GET /api/queues/today: the clinic QR and one row per doctor, with
    `queue` null until that doctor's queue is opened today. */
 export function useTodaysDoctors() {
-  const [doctors, setDoctors] = useState(deskToday.doctors)
+  const [today, setToday] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  /* Bumped after opening a queue, which re-runs the fetch below. */
+  const [reloads, setReloads] = useState(0)
 
-  /* Local today. Tomorrow this is POST /api/queues { doctorId } and a
-     refetch. Not scheduled today is a warning only: it never blocks. */
+  useEffect(() => {
+    let cancelled = false
+    apiGet('/queues/today')
+      .then((data) => {
+        if (cancelled) return
+        setToday(data)
+        setError(null)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [reloads])
+
+  /* Not being on today's schedule is a warning, never a block: a doctor who
+     came in on their day off is a normal Saturday. The server treats opening
+     an already-open queue as opening it, so pressing twice is harmless. */
   const openQueue = useCallback(async (doctorId) => {
-    setDoctors((list) =>
-      list.map((d) =>
-        d.doctorId === doctorId && !d.queue
-          ? { ...d, queue: { queueId: 1000 + doctorId, status: 'OPEN', openedBy: 'You', waitingCount: 0 } }
-          : d,
-      ),
-    )
+    const opened = await apiPost('/queues', { doctorId })
+    setReloads((n) => n + 1)
+    return opened
   }, [])
 
   return useMemo(() => ({
-    date: deskToday.date,
-    qrUrl: deskToday.qrUrl,
-    doctors,
+    date: today?.date ?? null,
+    qrUrl: today?.qrUrl ?? null,
+    doctors: today?.doctors ?? NO_DOCTORS,
     openQueue,
-    loading: false,
-    error: null,
-    sample: true,
-  }), [doctors, openQueue])
+    loading,
+    error,
+  }), [today, openQueue, loading, error])
 }
 
-// One shared empty list, so an empty queue doesn't look "changed" every render.
-const NO_TICKETS = []
+/* GET /api/queues/{queueId}/tickets: one doctor's queue, with names.
 
-/* GET /api/queues/{queueId}/tickets: one doctor's queue, with names. */
+   `setStatus` sends the move and replaces the board with the server's answer.
+   The server may refuse it — the chair is taken, someone else already called
+   that person in — and when it does, the screen must show what is true rather
+   than what was pressed. */
 export function useDeskQueue(queueId) {
-  /* Local status changes are stored with the queue they were made in, so
-     switching doctors never shows the previous doctor's rows, not even for
-     one render. Same idea as `useAvailability` above. */
-  const [edits, setEdits] = useState({ key: null, entries: [] })
-  const base = (queueId && deskTickets[queueId]?.entries) || NO_TICKETS
-  const entries = edits.key === queueId ? edits.entries : base
+  /* The board, the queue it was fetched for, and any failure, all in one
+     value. Comparing that queue against the one selected now means a previous
+     doctor's rows are never shown while a new request is still in flight, and
+     that an error about one queue cannot linger over another. Same idea as
+     `useAvailability` above. */
+  const [result, setResult] = useState({ key: null })
 
-  /* Local today. Tomorrow this posts and refetches, like `book` above:
-     the server has the final say on whether the move is allowed. */
+  useEffect(() => {
+    if (!queueId) return undefined
+    let cancelled = false
+    apiGet(`/queues/${queueId}/tickets`)
+      .then((data) => {
+        if (!cancelled) setResult({ key: queueId, data })
+      })
+      .catch((error) => {
+        if (!cancelled) setResult({ key: queueId, error })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [queueId])
+
+  const current = result.key === queueId ? result : null
+
+  /* The server returns the whole board, not the one ticket, because calling
+     someone in changes the waiting time of everyone behind them. */
   const setStatus = useCallback(async (ticketId, status) => {
-    setEdits((prev) => {
-      const list = prev.key === queueId ? prev.entries : base
-      return {
-        key: queueId,
-        entries: list.map((t) => (t.ticketId === ticketId ? { ...t, status } : t)),
-      }
-    })
-  }, [queueId, base])
+    const updated = await apiPatch(`/queues/${queueId}/tickets/${ticketId}`, { status })
+    setResult({ key: queueId, data: updated })
+  }, [queueId])
 
-  return useMemo(() => ({
-    entries,
-    updatedAt: queueId ? (deskTickets[queueId]?.updatedAt ?? null) : null,
-    waiting: entries.filter((e) => e.status === TICKET_STATUS.WAITING).length,
-    // One doctor, one chair: the server refuses a second IN_CHAIR (409).
-    chairTaken: entries.some((e) => e.status === TICKET_STATUS.IN_CHAIR),
-    setStatus,
-    loading: false,
-    error: null,
-    sample: true,
-  }), [entries, queueId, setStatus])
+  /* Adds a walk-in, then refetches. The post answers with the new ticket
+     alone, and the desk needs every row's waiting time recalculated. */
+  const addWalkIn = useCallback(async (details) => {
+    const created = await apiPost(`/queues/${queueId}/tickets`, details)
+    const refreshed = await apiGet(`/queues/${queueId}/tickets`)
+    setResult({ key: queueId, data: refreshed })
+    return created
+  }, [queueId])
+
+  return useMemo(() => {
+    const entries = current?.data?.entries ?? NO_TICKETS
+    return {
+      entries,
+      updatedAt: current?.data?.updatedAt ?? null,
+      waiting: entries.filter((e) => e.status === TICKET_STATUS.WAITING).length,
+      // One doctor, one chair: the server refuses a second IN_CHAIR (409).
+      chairTaken: entries.some((e) => e.status === TICKET_STATUS.IN_CHAIR),
+      setStatus,
+      addWalkIn,
+      // Derived, not stored: a queue is loading exactly while it has neither
+      // an answer nor a failure of its own yet.
+      loading: queueId != null && current == null,
+      error: current?.error ?? null,
+    }
+  }, [current, queueId, setStatus, addWalkIn])
 }

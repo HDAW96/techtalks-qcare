@@ -54,6 +54,10 @@ public class SecurityConfig {
                         // Browsers send an unauthenticated OPTIONS request
                         // before a cross-origin call.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Every queue endpoint answers with patients' names and
+                        // phone numbers, so being signed in is not enough -
+                        // only the front desk may read or move the queue.
+                        .requestMatchers("/api/queues/**").hasRole("RECEPTIONIST")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(restAuthEntryPoint)
