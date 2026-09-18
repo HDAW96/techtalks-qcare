@@ -498,7 +498,11 @@ function PatientDashboardPage() {
                     <QueueBoard entries={queue.entries} />
                   </div>
                   <div className="sheet__foot">
-                    <button type="button" className="btn btn--quiet">
+                    {/* Leaving the queue needs the patient ticket endpoints
+                        (SCRUM-56). Shown disabled rather than hidden, like the
+                        desk's unfinished buttons, so it cannot silently do
+                        nothing. */}
+                    <button type="button" className="btn btn--quiet" disabled title="Not built yet">
                       Give up my place
                     </button>
                   </div>
@@ -517,33 +521,32 @@ function PatientDashboardPage() {
               />
               <div className="sheet__body">
                 {/* Keyed by user so the fields refill if the user changes. */}
-                <form
-                  key={user.userId}
-                  onSubmit={(e) => e.preventDefault()}
-                  className="stack"
-                >
+                {/* Read-only by decision: the name and phone number are what a
+                    patient signs in with and how the desk finds their record,
+                    so they are changed at the desk, never from here. */}
+                <div key={user.userId} className="stack">
                   <div className="cells cells--two">
-                    <Cell label="Full name" defaultValue={user.fullName} />
+                    <Cell label="Full name" value={user.fullName} readOnly />
                     <Cell
                       label="Phone number"
                       type="tel"
                       note="You sign in with this and your name"
-                      defaultValue={user.phoneNumber ?? ''}
+                      value={user.phoneNumber ?? ''}
+                      readOnly
                     />
                   </div>
                   <div className="cells cells--two">
                     <Cell
                       label="Preferred language"
-                      defaultValue="English"
+                      value="English"
                       note="Arabic support is planned"
+                      readOnly
                     />
                   </div>
-                  <div className="auth__actions">
-                    <button type="submit" className="btn btn--live">
-                      Save changes
-                    </button>
-                  </div>
-                </form>
+                  <p className="meta">
+                    To change your name or phone number, ask at the front desk.
+                  </p>
+                </div>
               </div>
             </div>
           )}
