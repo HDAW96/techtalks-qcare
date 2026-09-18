@@ -141,16 +141,18 @@ on a screen's appearance; nothing is saved anywhere.
 
 | Area | Status |
 | :--- | :--- |
-| Register, sign in, session | Real — phone number + full name + password |
+| Register, sign in, session | Real — phone number + full name + password (at least 8 characters, with an uppercase letter, a lowercase letter and a special character) |
 | Doctors and treatments | Real — from the database |
 | Free times and booking | Real — the server works out the slots |
-| A patient's appointments | Real |
-| The desk's walk-in queue | Real — open a queue, add walk-ins, call in, skip, finish |
+| A patient's appointments | Real — including reschedule and cancel |
+| Reception: a day's appointments | Real — list any day, reschedule any appointment |
+| The desk's walk-in queue | Real — open a queue, add walk-ins, call in, skip, finish; live position and wait time |
 | Receptionist sign-in and dashboard | Real — the same sign-in form, at `/reception` |
+| Joining the queue by QR (`/join`) and a patient's own ticket | Not built yet — the desk's QR points at a page that does not exist yet |
 | Patient-facing queue board | **Sample data** — the desk endpoints carry names, so the public board needs its own |
 | Notifications | **Sample data** — no table exists in the ERD yet |
-| Cancel / reschedule | Buttons are present but do nothing yet |
-| Check in booked patient / Find patient | Shown disabled at the desk — not built yet |
+| Profile | Read-only — name and phone number are changed at the desk |
+| Check in booked patient / Find patient / Give up my place | Shown disabled — not built yet |
 | Doctor screens | Not built |
 
 ### Signing in as the receptionist
