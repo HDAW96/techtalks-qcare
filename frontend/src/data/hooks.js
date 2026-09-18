@@ -84,6 +84,14 @@ export function useAppointments() {
     return moved
   }, [])
 
+  /* Posts and refetches, like `book` and `reschedule`: the appointment moves
+     from upcoming to past, and the list has to be re-read to show that. */
+  const cancel = useCallback(async (id) => {
+    const cancelled = await apiPost(`/appointments/${id}/cancel`)
+    setReloads((n) => n + 1)
+    return cancelled
+  }, [])
+
   return useMemo(() => {
     const byDate = [...items].sort((a, b) => a.datetime.localeCompare(b.datetime))
     const isUpcoming = (a) => a.status === APPOINTMENT_STATUS.BOOKED
@@ -96,8 +104,9 @@ export function useAppointments() {
       error,
       book,
       reschedule,
+      cancel,
     }
-  }, [items, loading, error, book, reschedule])
+  }, [items, loading, error, book, reschedule, cancel])
 }
 
 /* SAMPLE DATA — the ERD has no notifications table, so there is nothing to

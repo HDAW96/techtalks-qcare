@@ -51,6 +51,17 @@ public class AppointmentController {
     }
 
     /**
+     * Cancels one of the caller's own appointments. A POST to an action, not
+     * a DELETE: the record stays, marked CANCELLED, as part of the patient's
+     * history.
+     */
+    @PostMapping("/{appointmentId}/cancel")
+    public AppointmentResponse cancel(Authentication authentication,
+            @PathVariable Integer appointmentId) {
+        return bookingService.cancel(signedInUserId(authentication), appointmentId);
+    }
+
+    /**
      * The user id comes from the verified token, never from the request body,
      * so a caller cannot act as someone else.
      */

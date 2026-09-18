@@ -64,7 +64,17 @@ function SheetHead({ title, note, right }) {
   )
 }
 
-function AppointmentRows({ items, cancellable, onReschedule }) {
+function AppointmentRows({
+  items,
+  cancellable,
+  onReschedule,
+  confirmingId,
+  cancelling,
+  cancelError,
+  onCancelStart,
+  onCancelConfirm,
+  onCancelKeep,
+}) {
   if (items.length === 0) {
     return (
       <div className="empty">
@@ -75,37 +85,72 @@ function AppointmentRows({ items, cancellable, onReschedule }) {
 
   return (
     <div className="rows">
-      {items.map((a) => (
-        <div className="row" key={a.id}>
-          <div>
-            <p className="row__title">{a.service}</p>
-            <p className="meta row__meta">
-              {formatDay(a.datetime, { year: true })} · {formatTime(a.datetime)} ·{' '}
-              {a.doctor}
-            </p>
+      {items.map((a) => {
+        /* Cancelling is two presses, and the second happens on the row
+           itself so the appointment being cancelled stays in view. The
+           row's id lives in the URL, like everything else on this page. */
+        const confirming = String(a.id) === confirmingId
+        return (
+          <div className="row" key={a.id}>
+            <div>
+              <p className="row__title">{a.service}</p>
+              <p className="meta row__meta">
+                {formatDay(a.datetime, { year: true })} · {formatTime(a.datetime)} ·{' '}
+                {a.doctor}
+              </p>
+              {confirming && cancelError && (
+                <p className="form-error" role="alert">
+                  {cancelError}
+                </p>
+              )}
+            </div>
+            <div className="row__side">
+              <Mark
+                status={STATUS_MARK[a.status]}
+                label={APPOINTMENT_LABEL[a.status] ?? a.status}
+              />
+              {cancellable && !confirming && (
+                <div className="row__actions">
+                  <button
+                    type="button"
+                    className="btn btn--quiet"
+                    onClick={() => onReschedule(a)}
+                  >
+                    Reschedule
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--quiet"
+                    onClick={() => onCancelStart(a)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {cancellable && confirming && (
+                <div className="row__actions">
+                  <button
+                    type="button"
+                    className="btn btn--live"
+                    disabled={cancelling}
+                    onClick={() => onCancelConfirm(a)}
+                  >
+                    {cancelling ? 'Cancelling…' : 'Yes, cancel it'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--quiet"
+                    disabled={cancelling}
+                    onClick={onCancelKeep}
+                  >
+                    Keep it
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="row__side">
-            <Mark
-              status={STATUS_MARK[a.status]}
-              label={APPOINTMENT_LABEL[a.status] ?? a.status}
-            />
-            {cancellable && (
-              <div className="row__actions">
-                <button
-                  type="button"
-                  className="btn btn--quiet"
-                  onClick={() => onReschedule(a)}
-                >
-                  Reschedule
-                </button>
-                <button type="button" className="btn btn--quiet">
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -164,6 +209,39 @@ function PatientDashboardPage() {
     open('appointments', { moved: String(moved.id) })
     // The picker is taller than the list, so the confirmation would be off screen.
     window.scrollTo(0, 0)
+  }
+
+  /* Cancelling works the same way: the row asked about lives in the URL as
+     ?cancel=<id>, and the one just cancelled as ?cancelled=<id>. The
+     cancelled one is looked up in `all`, not `upcoming` - it has just left
+     that list, which is the point. */
+  const confirmingCancel = section === 'appointments' ? params.get('cancel') : null
+  const justCancelled =
+    section === 'appointments'
+      ? appointments.all.find((a) => String(a.id) === params.get('cancelled'))
+      : undefined
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState(null)
+  const startCancel = (a) => {
+    setCancelError(null)
+    open('appointments', { cancel: String(a.id) })
+  }
+  const keepAppointment = () => {
+    setCancelError(null)
+    open('appointments')
+  }
+  const confirmCancel = async (a) => {
+    if (cancelling) return
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      await appointments.cancel(a.id)
+      open('appointments', { cancelled: String(a.id) })
+    } catch (e) {
+      setCancelError(e.message || 'Could not cancel this appointment. Please try again.')
+    } finally {
+      setCancelling(false)
+    }
   }
 
   const { yourTicket } = queue
@@ -309,6 +387,12 @@ function PatientDashboardPage() {
                   items={appointments.upcoming.slice(0, 1)}
                   cancellable
                   onReschedule={startMove}
+                  confirmingId={confirmingCancel}
+                  cancelling={cancelling}
+                  cancelError={cancelError}
+                  onCancelStart={startCancel}
+                  onCancelConfirm={confirmCancel}
+                  onCancelKeep={keepAppointment}
                 />
               </div>
             </>
@@ -350,6 +434,15 @@ function PatientDashboardPage() {
                   </p>
                 </div>
               )}
+              {justCancelled && (
+                <div className="sheet__body" role="status" style={{ paddingBlock: 16 }}>
+                  <p>
+                    {justCancelled.service} on {formatDay(justCancelled.datetime)} at{' '}
+                    {formatTime(justCancelled.datetime)} cancelled. It is in your past
+                    appointments.
+                  </p>
+                </div>
+              )}
               <div className="tabs">
                 {['upcoming', 'past'].map((t) => (
                   <button
@@ -368,6 +461,12 @@ function PatientDashboardPage() {
                 items={appointments[tab]}
                 cancellable={tab === 'upcoming'}
                 onReschedule={startMove}
+                confirmingId={confirmingCancel}
+                cancelling={cancelling}
+                cancelError={cancelError}
+                onCancelStart={startCancel}
+                onCancelConfirm={confirmCancel}
+                onCancelKeep={keepAppointment}
               />
             </div>
           )}

@@ -141,6 +141,66 @@ class QueueFlowTest {
         mvc.perform(get("/api/queues/today")).andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void aPatientCancelsOnlyTheirOwnBookedAppointment() throws Exception {
+        String nour = registerAndSignIn("Nour Khalil", "03771122");
+        String ali = registerAndSignIn("Ali Mansour", "03771133");
+
+        // Nour books the first free time the server offers her.
+        JsonNode days = read(get("/api/doctors/1/availability?serviceId=1&days=30"), nour);
+        String when = null;
+        for (JsonNode day : days) {
+            for (JsonNode slot : day.path("slots")) {
+                if (slot.path("open").asBoolean()) {
+                    when = day.path("date").asText() + "T" + slot.path("time").asText();
+                    break;
+                }
+            }
+            if (when != null) break;
+        }
+        assertThat(when).isNotNull();
+        int id = read(post("/api/appointments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"doctorId\":1,\"serviceId\":1,\"datetime\":\"" + when + "\"}"),
+                nour, 201).path("id").asInt();
+
+        // Someone else's appointment answers as if it did not exist, so ids
+        // cannot be probed.
+        mvc.perform(post("/api/appointments/" + id + "/cancel")
+                .header("Authorization", "Bearer " + ali))
+                .andExpect(status().isNotFound());
+
+        // The owner cancels it: the record stays, marked CANCELLED.
+        JsonNode cancelled = read(post("/api/appointments/" + id + "/cancel"), nour);
+        assertThat(cancelled.path("status").asText()).isEqualTo("CANCELLED");
+
+        // And cannot cancel it twice.
+        mvc.perform(post("/api/appointments/" + id + "/cancel")
+                .header("Authorization", "Bearer " + nour))
+                .andExpect(status().isConflict());
+
+        // The time is free again for the next person.
+        JsonNode after = read(get("/api/doctors/1/availability?serviceId=1&days=30"), ali);
+        String date = when.substring(0, 10), time = when.substring(11);
+        boolean open = false;
+        for (JsonNode day : after) {
+            if (!day.path("date").asText().equals(date)) continue;
+            for (JsonNode slot : day.path("slots")) {
+                if (slot.path("time").asText().equals(time)) open = slot.path("open").asBoolean();
+            }
+        }
+        assertThat(open).isTrue();
+    }
+
+    private String registerAndSignIn(String fullName, String phone) throws Exception {
+        mvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "fullName", fullName, "phoneNumber", phone, "password", "a-long-password"))))
+                .andExpect(status().isCreated());
+        return signIn(phone, fullName, "a-long-password").path("token").asText();
+    }
+
     // ---- helpers ----
 
     private JsonNode signIn(String phone, String fullName, String password) throws Exception {

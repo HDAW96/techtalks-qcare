@@ -184,6 +184,26 @@ public class BookingService {
     }
 
     /**
+     * Cancels one of the signed-in patient's own appointments. The record is
+     * kept and marked CANCELLED rather than deleted: it belongs in their
+     * history, and the clinic wants to know who cancels. The slot is free
+     * again at once, because availability only counts BOOKED.
+     */
+    @Transactional
+    public AppointmentResponse cancel(Integer userId, Integer appointmentId) {
+        Appointment appointment = ownedAppointment(userId, appointmentId);
+
+        if (!"BOOKED".equals(appointment.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_CANCELLABLE",
+                    "Only a booked appointment can be cancelled.");
+        }
+
+        appointment.setStatus("CANCELLED");
+        appointmentRepository.save(appointment);
+        return AppointmentResponse.of(appointment);
+    }
+
+    /**
      * The appointment, but only if it is the caller's. Someone else's answers
      * the same as one that does not exist, so ids cannot be probed.
      */
