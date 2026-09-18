@@ -134,7 +134,7 @@ function RegisterPage() {
                     label="Password"
                     type="password"
                     autoComplete="new-password"
-                    note={`At least ${MIN_PASSWORD} characters`}
+                    note={`At least ${MIN_PASSWORD} characters including 1 uppercase, 1 lowercase and 1 special character.`}
                     value={form.password}
                     disabled={submitting}
                     error={errors.password}
