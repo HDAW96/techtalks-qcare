@@ -3,6 +3,7 @@ package com.example.service;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentResponse;
 import com.example.dto.DayAvailabilityResponse;
+import com.example.dto.DeskAppointmentResponse;
 import com.example.entity.Appointment;
 import com.example.entity.Doctor;
 import com.example.entity.DoctorAvailability;
@@ -36,6 +37,7 @@ public class BookingService {
     private static final int GRID_MINUTES = 30;
     private static final DateTimeFormatter LOCAL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
@@ -66,6 +68,26 @@ public class BookingService {
     }
 
     /**
+     * Every appointment in the clinic on one day, for the reception desk.
+     * Patients never reach this: their own list is forSignedInPatient.
+     */
+    @Transactional(readOnly = true)
+    public List<DeskAppointmentResponse> forDay(Integer userId, String date) {
+        requireReceptionist(userId);
+        LocalDate day;
+        try {
+            day = date == null ? LocalDate.now() : LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "DATE_INVALID",
+                    "That is not a valid date.");
+        }
+        return appointmentRepository
+                .findAllBetween(day.atStartOfDay(), day.plusDays(1).atStartOfDay()).stream()
+                .map(DeskAppointmentResponse::of)
+                .toList();
+    }
+
+    /**
      * Every start time on the grid for the next few days, marked open or not.
      *
      * A time is open only if the whole treatment fits inside one of the
@@ -73,9 +95,10 @@ public class BookingService {
      * the end as well as the start is what stops a 45 minute cleaning being
      * booked at 12:45 when the clinic closes for lunch at 13:00.
      *
-     * When a patient is moving an appointment, `ignoringId` names it so its
-     * current time does not block the times around it. Only its owner may
-     * pass it: otherwise anyone could learn when someone else is booked.
+     * When an appointment is being moved, `ignoringId` names it so its
+     * current time does not block the times around it. Only someone allowed
+     * to move it may pass it (its patient, or reception): otherwise anyone
+     * could learn when someone else is booked.
      */
     @Transactional(readOnly = true)
     public List<DayAvailabilityResponse> availability(Integer doctorId, Integer serviceId, int days,
@@ -85,7 +108,7 @@ public class BookingService {
                 throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
                         "Please sign in again.");
             }
-            ownedAppointment(userId, ignoringId);
+            movableAppointment(userId, ignoringId);
         }
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "DOCTOR_NOT_FOUND",
@@ -153,13 +176,13 @@ public class BookingService {
     }
 
     /**
-     * Moves one of the signed-in patient's own appointments to a new time with
-     * the same doctor and treatment. The new time passes exactly the checks a
-     * fresh booking does.
+     * Moves an appointment to a new time with the same doctor and treatment.
+     * A patient may move only their own; reception may move anyone's. The new
+     * time passes exactly the checks a fresh booking does.
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentResponse reschedule(Integer userId, Integer appointmentId, String datetime) {
-        Appointment appointment = ownedAppointment(userId, appointmentId);
+        Appointment appointment = movableAppointment(userId, appointmentId);
 
         if (!"BOOKED".equals(appointment.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_RESCHEDULABLE",
@@ -184,14 +207,15 @@ public class BookingService {
     }
 
     /**
-     * Cancels one of the signed-in patient's own appointments. The record is
-     * kept and marked CANCELLED rather than deleted: it belongs in their
-     * history, and the clinic wants to know who cancels. The slot is free
-     * again at once, because availability only counts BOOKED.
+     * Cancels an appointment: a patient's own, or anyone's when the caller is
+     * reception - the same rule as reschedule. The record is kept and marked
+     * CANCELLED rather than deleted: it belongs in the patient's history, and
+     * the clinic wants to know who cancels. The slot is free again at once,
+     * because availability only counts BOOKED.
      */
     @Transactional
     public AppointmentResponse cancel(Integer userId, Integer appointmentId) {
-        Appointment appointment = ownedAppointment(userId, appointmentId);
+        Appointment appointment = movableAppointment(userId, appointmentId);
 
         if (!"BOOKED".equals(appointment.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_CANCELLABLE",
@@ -201,6 +225,36 @@ public class BookingService {
         appointment.setStatus("CANCELLED");
         appointmentRepository.save(appointment);
         return AppointmentResponse.of(appointment);
+    }
+
+    /**
+     * The appointment, if the caller may move it: reception may move any, a
+     * patient only their own. Everyone else gets what ownedAppointment gives.
+     */
+    private Appointment movableAppointment(Integer userId, Integer appointmentId) {
+        if (isReceptionist(userId)) {
+            return appointmentRepository.findById(appointmentId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                            "APPOINTMENT_NOT_FOUND", "That appointment was not found."));
+        }
+        return ownedAppointment(userId, appointmentId);
+    }
+
+    /**
+     * The role is read from the database, not the token, so an account whose
+     * role changes loses access straight away rather than when its token ends.
+     */
+    private boolean isReceptionist(Integer userId) {
+        return userRepository.findById(userId)
+                .map(u -> ROLE_RECEPTIONIST.equals(u.getRole()))
+                .orElse(false);
+    }
+
+    private void requireReceptionist(Integer userId) {
+        if (!isReceptionist(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_RECEPTION",
+                    "Only reception staff can see the clinic's appointments.");
+        }
     }
 
     /**

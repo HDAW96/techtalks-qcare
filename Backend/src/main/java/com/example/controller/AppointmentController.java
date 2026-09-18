@@ -3,6 +3,7 @@ package com.example.controller;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentRescheduleDTO;
 import com.example.dto.AppointmentResponse;
+import com.example.dto.DeskAppointmentResponse;
 import com.example.service.BookingService;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,6 +36,16 @@ public class AppointmentController {
         return bookingService.forSignedInPatient(signedInUserId(authentication));
     }
 
+    /**
+     * Every appointment on one day (today when no date is given), with who
+     * each is for. Reception only; anyone else gets 403.
+     */
+    @GetMapping
+    public List<DeskAppointmentResponse> forDay(Authentication authentication,
+            @RequestParam(required = false) String date) {
+        return bookingService.forDay(signedInUserId(authentication), date);
+    }
+
     @PostMapping
     public ResponseEntity<AppointmentResponse> book(Authentication authentication,
             @RequestBody AppointmentBookingDTO request) {
@@ -41,7 +53,10 @@ public class AppointmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(booked);
     }
 
-    /** Moves one of the caller's own appointments to a new time. */
+    /**
+     * Moves an appointment to a new time: a patient's own, or anyone's when
+     * the caller is reception.
+     */
     @PatchMapping("/{appointmentId}")
     public AppointmentResponse reschedule(Authentication authentication,
             @PathVariable Integer appointmentId,

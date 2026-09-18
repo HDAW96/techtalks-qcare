@@ -27,15 +27,20 @@ public class AppointmentResponse {
 
     public static AppointmentResponse of(Appointment appointment) {
         AppointmentResponse dto = new AppointmentResponse();
-        dto.id = appointment.getAppointmentId();
-        dto.doctorId = appointment.getDoctor().getDoctorId();
-        dto.doctor = appointment.getDoctor().getUser().getFullName();
-        dto.serviceId = appointment.getMedicalService().getServiceId();
-        dto.service = appointment.getMedicalService().getServiceName();
-        dto.minutes = appointment.getMedicalService().getDurationMinutes();
-        dto.datetime = appointment.getAppointmentDatetime().format(LOCAL);
-        dto.status = appointment.getStatus();
+        dto.fill(appointment);
         return dto;
+    }
+
+    /** Shared with DeskAppointmentResponse, which adds who the patient is. */
+    protected void fill(Appointment appointment) {
+        id = appointment.getAppointmentId();
+        doctorId = appointment.getDoctor().getDoctorId();
+        doctor = appointment.getDoctor().getUser().getFullName();
+        serviceId = appointment.getMedicalService().getServiceId();
+        service = appointment.getMedicalService().getServiceName();
+        minutes = appointment.getMedicalService().getDurationMinutes();
+        datetime = appointment.getAppointmentDatetime().format(LOCAL);
+        status = appointment.getStatus();
     }
 
     public Integer getId() {

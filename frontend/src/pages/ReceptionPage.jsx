@@ -6,6 +6,7 @@ import Legend from '../components/Legend'
 import QueueDesk from '../components/QueueDesk'
 import QrPlaceholder from '../components/QrPlaceholder'
 import WalkInForm from '../components/WalkInForm'
+import DeskAppointments from '../components/DeskAppointments'
 import { useBookingOptions, useDeskQueue, useTodaysDoctors } from '../data/hooks'
 import { clinic } from '../data/mock'
 import '../styles/desk.css'
@@ -21,7 +22,13 @@ function ReceptionPage() {
      comes back to the same queue instead of a blank screen. */
   const [params, setParams] = useSearchParams()
   const doctorId = Number(params.get('doctor')) || null
-  const choose = (id) => setParams({ doctor: String(id) })
+  // Keeps the appointments section's own keys (day, move) as they are.
+  const choose = (id) =>
+    setParams((p) => {
+      const next = new URLSearchParams(p)
+      next.set('doctor', String(id))
+      return next
+    })
 
   const doctor = doctors.find((d) => d.doctorId === doctorId) ?? null
   const queue = useDeskQueue(doctor?.queue?.queueId ?? null)
@@ -221,6 +228,8 @@ function ReceptionPage() {
           </div>
 
         </div>
+
+        <DeskAppointments />
       </main>
 
       <SiteFooter />
