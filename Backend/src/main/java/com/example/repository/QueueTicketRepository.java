@@ -49,6 +49,16 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
 
     Optional<QueueTicket> findByAppointment(Appointment appointment);
 
+    /**
+     * Every active ticket a patient holds on one date, across all doctors.
+     * A List, not an Optional: a patient joining a second doctor's queue on
+     * the same day must be caught as ALREADY_IN_QUEUE, not crash with "more
+     * than one result".
+     *
+     * Not called anywhere yet, so one-ticket-per-day across doctors is not
+     * enforced: addWalkIn only checks the one queue. The patient join
+     * endpoint (SCRUM-56, next step) is where this should be used.
+     */
     @Query("""
             SELECT t
             FROM QueueTicket t
@@ -56,7 +66,7 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
               AND t.queue.queueDate = :queueDate
               AND t.status IN ('WAITING', 'IN_CHAIR')
             """)
-    Optional<QueueTicket> findActiveTicketForPatientOnDate(
+    List<QueueTicket> findActiveTicketForPatientOnDate(
             @Param("patient") Patient patient,
             @Param("queueDate") LocalDate queueDate);
 }

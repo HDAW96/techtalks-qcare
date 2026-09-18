@@ -2,7 +2,9 @@ package com.example.repository;
 
 import com.example.entity.Doctor;
 import com.example.entity.Queue;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,6 +19,17 @@ public interface QueueRepository extends JpaRepository<Queue, Integer> {
      * already open must find this one rather than insert a second.
      */
     Optional<Queue> findByDoctorAndQueueDate(Doctor doctor, LocalDate queueDate);
+
+    /**
+     * Reads the queue with a row lock held until the transaction ends
+     * (SELECT ... FOR UPDATE). Adding a ticket or moving one's status takes
+     * it first, so two requests against the same queue run one after the
+     * other instead of racing - the same pattern DoctorRepository.lockById
+     * uses against double bookings (see BookingService.requireBookable).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select q from Queue q where q.queueId = :id")
+    Optional<Queue> lockById(@Param("id") Integer id);
 
     /**
      * Every queue open on a date.
