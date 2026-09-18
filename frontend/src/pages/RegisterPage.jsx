@@ -6,20 +6,7 @@ import Cell from '../components/Cell'
 import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
 import { isValidPhone } from '../phone'
-
-const MIN_PASSWORD = 8
-
-/* The first rule the password breaks, or null once it meets them all. The
-   same four rules AuthService.register enforces, checked here so the button
-   waits for a password the server will accept instead of failing after the
-   press. */
-function passwordProblem(password) {
-  if (password.length < MIN_PASSWORD) return `At least ${MIN_PASSWORD} characters`
-  if (!/[A-Z]/.test(password)) return 'Add at least one uppercase letter'
-  if (!/[a-z]/.test(password)) return 'Add at least one lowercase letter'
-  if (!/[^a-zA-Z0-9]/.test(password)) return 'Add at least one special character, for example ! or -'
-  return null
-}
+import { PASSWORD_NOTE, passwordProblem } from '../password'
 
 /* An account is a phone number, a full name and a password. There is no email:
    the USERS table does not have one. The name is part of the identity rather
@@ -143,7 +130,7 @@ function RegisterPage() {
                     label="Password"
                     type="password"
                     autoComplete="new-password"
-                    note={`At least ${MIN_PASSWORD} characters including 1 uppercase, 1 lowercase and 1 special character.`}
+                    note={PASSWORD_NOTE}
                     value={form.password}
                     disabled={submitting}
                     error={errors.password}

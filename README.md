@@ -170,4 +170,8 @@ them:
 | `03400010` | `Reception Desk Two` | `changeme123` |
 
 That is a development password on a development database. Both are flagged
-`must_change_password` and must never be relied on anywhere else.
+`must_change_password`, so **the first sign-in on the website asks you to
+choose your own password** before the desk opens. After that, sign in with the
+password you chose. `changeme123` keeps working through the API until then,
+which is what the automated tests use. Anyone signed in can change their
+password again from the footer ("Change password").

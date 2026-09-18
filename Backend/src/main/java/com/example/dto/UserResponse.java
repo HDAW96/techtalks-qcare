@@ -14,6 +14,8 @@ public class UserResponse {
     private String phoneNumber;
     private String role;
     private Integer patientId;
+    /** True for the seeded staff accounts until they choose their own password. */
+    private boolean mustChangePassword;
 
     public UserResponse() {
     }
@@ -24,6 +26,7 @@ public class UserResponse {
         dto.fullName = user.getFullName();
         dto.phoneNumber = user.getPhoneNumber();
         dto.role = user.getRole();
+        dto.mustChangePassword = Boolean.TRUE.equals(user.getMustChangePassword());
         if (patient != null) {
             dto.patientId = patient.getPatientId();
         }
@@ -48,6 +51,10 @@ public class UserResponse {
 
     public Integer getPatientId() {
         return patientId;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
     }
 
 

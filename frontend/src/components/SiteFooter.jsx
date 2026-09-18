@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { clinic } from '../data/mock'
 import { useAuth } from '../auth/useAuth'
+import { HOME_ROUTE_FOR_ROLE, ROLE } from '../constants'
 
 function SiteFooter() {
   const { user, loading } = useAuth()
+  const homeLabel = { [ROLE.PATIENT]: 'My record', [ROLE.RECEPTIONIST]: 'Front desk' }[user?.role]
   const untilKnown = loading ? { visibility: 'hidden' } : undefined
 
   return (
@@ -33,7 +35,12 @@ function SiteFooter() {
           <p className="meta">Pages</p>
           <Link to="/">Home</Link>
           {user ? (
-            <Link to="/dashboard">My record</Link>
+            <>
+              {/* The same role-aware link as the header: a receptionist has no
+                  patient record, and a doctor has no screen yet. */}
+              {homeLabel && <Link to={HOME_ROUTE_FOR_ROLE[user.role]}>{homeLabel}</Link>}
+              <Link to="/change-password">Change password</Link>
+            </>
           ) : (
             <>
               <Link to="/login" style={untilKnown}>
