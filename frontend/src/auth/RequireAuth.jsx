@@ -17,6 +17,12 @@ function RequireAuth({ children, roles }) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
+  // An account still on its temporary password (the seeded staff) must
+  // choose its own before it can open anything else.
+  if (user.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
   // Signed in, but this area is not for them. Not a redirect: every role's
   // home is /dashboard until the doctor and receptionist screens exist, so
   // redirecting would loop.

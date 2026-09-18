@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.example.dto.AuthResponse;
+import com.example.dto.ChangePasswordDTO;
 import com.example.dto.LoginDTO;
 import com.example.dto.RegisterDTO;
 import com.example.dto.UserResponse;
@@ -37,9 +38,21 @@ public class AuthController {
      */
     @GetMapping("/me")
     public UserResponse me(Authentication authentication) {
+        return authService.currentUser(signedInUserId(authentication));
+    }
+
+    /** Signed-in only: the user id comes from the token, never the body. */
+    @PostMapping("/change-password")
+    public UserResponse changePassword(Authentication authentication,
+            @RequestBody ChangePasswordDTO request) {
+        return authService.changePassword(signedInUserId(authentication),
+                request.getCurrentPassword(), request.getNewPassword());
+    }
+
+    private Integer signedInUserId(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Integer userId)) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Please sign in again.");
         }
-        return authService.currentUser(userId);
+        return userId;
     }
 }

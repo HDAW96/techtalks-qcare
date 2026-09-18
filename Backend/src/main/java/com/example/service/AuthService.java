@@ -51,25 +51,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");
         }
-        if (password == null || password.length() < 8) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_SHORT",
-                    "Your password must be at least 8 characters.");
-        }
-
-        // The same three rules the register form checks before submitting
-        // (RegisterPage.jsx), so the form and the server never disagree.
-        if (!password.matches(".*[A-Z].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
-                    "Your password must contain at least one uppercase letter.");
-        }
-        if (!password.matches(".*[a-z].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASE",
-                    "Your password must contain at least one lowercase letter.");
-        }
-        if (!password.matches(".*[^a-zA-Z0-9].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
-                    "Your password must contain at least one special character.");
-        }
+        requireAcceptablePassword(password);
 
         if (userRepository.existsByPhoneNumberAndFullName(phone, fullName)) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
@@ -111,12 +93,68 @@ public class AuthService {
         return respond(user, patientRepository.findByUser(user).orElse(null));
     }
 
+    /**
+     * Replaces the signed-in user's password. The current one is asked for
+     * again, so a phone left signed in at the desk cannot be used to lock its
+     * owner out. Clears must_change_password, which is how the seeded staff
+     * accounts stop being flagged.
+     *
+     * A wrong current password is a 400, not a 401: the frontend treats 401
+     * as "your session ended" and would sign the user out.
+     */
+    @Transactional
+    public UserResponse changePassword(Integer userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                        "Please sign in again."));
+
+        if (currentPassword == null
+                || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CURRENT_PASSWORD_WRONG",
+                    "Your current password is not right.");
+        }
+        requireAcceptablePassword(newPassword);
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_PASSWORD",
+                    "Please choose a password different from your current one.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        return UserResponse.of(user, patientRepository.findByUser(user).orElse(null));
+    }
+
     @Transactional(readOnly = true)
     public UserResponse currentUser(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
                         "Please sign in again."));
         return UserResponse.of(user, patientRepository.findByUser(user).orElse(null));
+    }
+
+    /**
+     * The rules every new password must meet, on registering and on changing
+     * it. The register and change-password forms check the same four rules
+     * before submitting (frontend/src/password.js), so they never disagree.
+     */
+    private static void requireAcceptablePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_SHORT",
+                    "Your password must be at least 8 characters.");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
+                    "Your password must contain at least one uppercase letter.");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASE",
+                    "Your password must contain at least one lowercase letter.");
+        }
+        if (!password.matches(".*[^a-zA-Z0-9].*")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
+                    "Your password must contain at least one special character.");
+        }
     }
 
     private AuthResponse respond(User user, Patient patient) {

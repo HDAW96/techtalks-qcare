@@ -184,9 +184,21 @@ export function AuthProvider({ children }) {
     [startSession],
   )
 
+  /* The server answers with the updated user, so `mustChangePassword` clears
+     here at once and RequireAuth stops sending them back to the form. The
+     token stays valid: it names the user, not the password. */
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    if (USE_MOCK) {
+      setUser((u) => ({ ...u, mustChangePassword: false }))
+      return
+    }
+    const updated = await apiPost('/auth/change-password', { currentPassword, newPassword })
+    setUser(updated)
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, signIn, register, signOut, isMock: USE_MOCK }),
-    [user, loading, signIn, register, signOut],
+    () => ({ user, loading, signIn, register, signOut, changePassword, isMock: USE_MOCK }),
+    [user, loading, signIn, register, signOut, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PatientDashboardPage from './pages/PatientDashboardPage'
 import ReceptionPage from './pages/ReceptionPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RequireAuth from './auth/RequireAuth'
 import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
@@ -45,6 +46,15 @@ function App() {
         element={
           <RequireAuth roles={ROUTE_ROLES['/reception']}>
             <ReceptionPage />
+          </RequireAuth>
+        }
+      />
+      {/* Any signed-in role. */}
+      <Route
+        path="/change-password"
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
           </RequireAuth>
         }
       />
