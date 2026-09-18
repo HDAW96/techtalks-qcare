@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
@@ -35,6 +36,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+// Both tests below open the first seeded doctor's queue. Without this, the
+// second test method (and any test class that runs after this one, such as
+// QueueFlowTest) would find that doctor's queue already carrying tickets
+// left behind here, instead of a clean seeded database. AFTER_EACH_TEST_METHOD
+// rebuilds the whole Spring context - and with it, the create-drop H2 schema
+// and DataSeeder - so every test method in this class starts from the same
+// clean slate QueueFlowTest expects, whichever order the tests run in.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class QueueConcurrencyTest {
 
     private static final String DESK_PHONE = "03400009";
