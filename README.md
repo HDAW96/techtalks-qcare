@@ -168,7 +168,7 @@ them:
 
 | Phone | Full name | Password |
 | :--- | :--- | :--- |
-| `03400009` | `Reception Desk One` | `changeme123` |
+| `03400009` | `Reception Desk One` | `Changeme123!` |
 | `03400010` | `Reception Desk Two` | `changeme123` |
 
 That is a development password on a development database. Both are flagged
