@@ -4,7 +4,7 @@ import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Legend from '../components/Legend'
 import QueueDesk from '../components/QueueDesk'
-import QrPlaceholder from '../components/QrPlaceholder'
+import QrCode from '../components/QrCode'
 import WalkInForm from '../components/WalkInForm'
 import DeskAppointments from '../components/DeskAppointments'
 import { useBookingOptions, useDeskQueue, useTodaysDoctors } from '../data/hooks'
@@ -69,7 +69,20 @@ function ReceptionPage() {
   }
 
   // One clinic QR per day. Nothing to join until a queue is open.
-  const anyQueueOpen = doctors.some((d) => d.queue)
+  const anyQueueOpen = doctors.some((d) => d.queue?.status === 'OPEN')
+  const selectedOpen = doctor?.queue?.status === 'OPEN'
+
+  /* Closing stops new joins, by QR and at the desk; people already in the
+     line can still be called in and finished. */
+  const closeQueue = async (queueId) => {
+    setActionError(null)
+    try {
+      await today.closeQueue(queueId)
+      setAddingWalkIn(false)
+    } catch (error) {
+      setActionError(error.message || 'Could not close that queue.')
+    }
+  }
 
   return (
     <div className="page">
@@ -107,7 +120,7 @@ function ReceptionPage() {
                       <div className="doc__name">{d.doctorName}</div>
                       <p className="meta">
                         {d.queue
-                          ? `Queue open · ${d.doctorId === doctorId ? queue.waiting : d.queue.waitingCount} waiting`
+                          ? `${d.queue.status === 'OPEN' ? 'Queue open' : 'Queue closed'} · ${d.doctorId === doctorId ? queue.waiting : d.queue.waitingCount} waiting`
                           : 'No queue yet today'}
                       </p>
                     </div>
@@ -133,8 +146,12 @@ function ReceptionPage() {
               <div className="sheet__body desk-qr">
                 {anyQueueOpen ? (
                   <>
-                    <QrPlaceholder code={today.qrUrl} />
+                    <QrCode value={today.qrUrl} label="Today's clinic QR code for joining the walk-in queue" />
                     <p className="meta">Patients scan to join today&rsquo;s walk-in queue</p>
+                    {/* The same link as text, for a laptop with no phone to hand. */}
+                    <p className="meta" style={{ marginTop: 8 }}>
+                      <a href={today.qrUrl} target="_blank" rel="noreferrer">Open the join page</a>
+                    </p>
                   </>
                 ) : (
                   <p className="meta">Open a doctor&rsquo;s queue to show today&rsquo;s QR</p>
@@ -185,7 +202,16 @@ function ReceptionPage() {
                   </>
                 )}
 
-                {addingWalkIn ? (
+                {!selectedOpen ? (
+                  <div className="sheet__foot desk-foot">
+                    <p className="meta" style={{ flexBasis: '100%' }}>
+                      Closed: nobody new can join. Those already in the line can still be called in.
+                    </p>
+                    <button type="button" className="btn btn--live" onClick={() => openQueue(doctor.doctorId)}>
+                      Reopen queue
+                    </button>
+                  </div>
+                ) : addingWalkIn ? (
                   <WalkInForm
                     services={services}
                     onAdd={addWalkIn}
@@ -211,6 +237,13 @@ function ReceptionPage() {
                     </button>
                     <button type="button" className="btn btn--quiet" disabled title="Not built yet">
                       Find patient
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--quiet"
+                      onClick={() => closeQueue(doctor.queue.queueId)}
+                    >
+                      Close queue
                     </button>
                   </div>
                 )}

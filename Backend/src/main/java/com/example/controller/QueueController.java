@@ -1,6 +1,10 @@
 package com.example.controller;
 
 import com.example.dto.DoctorQueueResponse;
+import com.example.dto.JoinOptionResponse;
+import com.example.dto.JoinQueueDTO;
+import com.example.dto.PatientTicketResponse;
+import com.example.dto.PublicBoardResponse;
 import com.example.dto.OpenQueueDTO;
 import com.example.dto.QueueTicketResponse;
 import com.example.dto.QueueTicketsResponse;
@@ -18,15 +22,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * The front desk's queue.
  *
- * Every endpoint here carries patients' names and phone numbers, so the whole
- * controller is receptionist-only - see SecurityConfig. The patient-facing
- * board, when it is built, needs its own endpoint returning ticket numbers
- * alone.
+ * The desk endpoints carry patients' names and phone numbers, so they are
+ * receptionist-only - see SecurityConfig. Three are public on purpose and carry
+ * no names at all: the join options and joining behind the clinic QR, and the
+ * waiting-room board.
  */
 @RestController
 @RequestMapping("/api/queues")
@@ -50,6 +57,40 @@ public class QueueController {
         DoctorQueueResponse opened = queueService.openQueue(
                 signedInUserId(authentication), request.getDoctorId());
         return ResponseEntity.status(HttpStatus.CREATED).body(opened);
+    }
+
+    /** Nobody new can join; those already in it can still be seen to. */
+    @PostMapping("/{queueId}/close")
+    public DoctorQueueResponse close(@PathVariable Integer queueId) {
+        return queueService.closeQueue(queueId);
+    }
+
+    /* ── Public: behind the clinic QR, and the waiting-room screen ── */
+
+    /** The doctors a patient can choose after scanning today's QR. Public. */
+    @GetMapping("/join-options")
+    public List<JoinOptionResponse> joinOptions(@RequestParam(required = false) String date,
+            @RequestParam(required = false) String sig) {
+        return queueService.joinOptions(date, sig);
+    }
+
+    /**
+     * Joins the chosen doctor's queue. Public, but a token still counts: a
+     * signed-in patient joins as themselves, anyone else gives a name and
+     * phone number.
+     */
+    @PostMapping("/join")
+    public ResponseEntity<PatientTicketResponse> join(Authentication authentication,
+            @RequestBody JoinQueueDTO request) {
+        Integer userId = authentication != null && authentication.getPrincipal() instanceof Integer id
+                ? id : null;
+        return ResponseEntity.status(HttpStatus.CREATED).body(queueService.join(userId, request));
+    }
+
+    /** Every open queue today, ticket numbers only. Public. */
+    @GetMapping("/today/board")
+    public List<PublicBoardResponse> board() {
+        return queueService.publicBoard();
     }
 
     @GetMapping("/{queueId}/tickets")

@@ -6,7 +6,7 @@ import QueueBoard from '../components/QueueBoard'
 import Legend from '../components/Legend'
 import { useAuth } from '../auth/useAuth'
 import { clinic } from '../data/mock'
-import { useQueue } from '../data/hooks'
+import { boardEntries, usePublicBoard } from '../data/hooks'
 
 const walkIn = [
   'Scan the QR code at the clinic desk.',
@@ -26,8 +26,8 @@ function GuestHomePage() {
   const { hash, key } = useLocation()
   const { user, loading } = useAuth()
   const untilKnown = loading ? { visibility: 'hidden' } : undefined
-  // The public board: no patient id, so no row is marked as anyone's ticket.
-  const queue = useQueue()
+  // The public board: ticket numbers only, and no row is marked as anyone's.
+  const { queues } = usePublicBoard()
 
   /* Client-side navigation does not scroll to a URL hash the way a normal
      page load does, so arriving at "/#how" (from this page or any other)
@@ -86,25 +86,49 @@ function GuestHomePage() {
             </div>
 
             <div className="sheet">
-              <div className="specimen__head">
-                <div className="now">
-                  <span className="meta">Now serving</span>
-                  <span className="now__num">{queue.nowServing}</span>
-                </div>
-                <div className="meta meta--right">
-                  <p>{clinic.name}</p>
-                  <p>Updated {queue.updatedAt}</p>
-                  <p style={{ marginTop: 8 }}>
-                    <span className="synthetic">Sample data</span>
-                  </p>
-                </div>
-              </div>
+              {queues.length === 0 && (
+                <>
+                  <div className="specimen__head">
+                    <div className="now">
+                      <span className="meta">Now serving</span>
+                      <span className="now__num">—</span>
+                    </div>
+                    <div className="meta meta--right">
+                      <p>{clinic.name}</p>
+                      <p>Live · updates every 15 seconds</p>
+                    </div>
+                  </div>
+                  <div className="empty">
+                    <p>No walk-in queue is open right now.</p>
+                  </div>
+                </>
+              )}
 
-              <Legend items={['live', 'wait']} />
-
-              <div className="specimen__body">
-                <QueueBoard entries={queue.entries} />
-              </div>
+              {/* One board per open doctor's queue: ticket numbers and waits only. */}
+              {queues.map((q, i) => (
+                <div key={q.doctorId}>
+                  <div className="specimen__head">
+                    <div className="now">
+                      <span className="meta">Now serving · {q.doctorName}</span>
+                      <span className="now__num">{q.nowServing ?? '—'}</span>
+                    </div>
+                    {i === 0 && (
+                      <div className="meta meta--right">
+                        <p>{clinic.name}</p>
+                        <p>Live · updates every 15 seconds</p>
+                      </div>
+                    )}
+                  </div>
+                  <Legend items={['live', 'wait']} />
+                  <div className="specimen__body">
+                    {q.entries.length > 0 ? (
+                      <QueueBoard entries={boardEntries(q.entries, null)} />
+                    ) : (
+                      <p className="meta">Nobody waiting.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

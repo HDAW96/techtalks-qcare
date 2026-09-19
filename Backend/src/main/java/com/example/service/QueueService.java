@@ -1,6 +1,10 @@
 package com.example.service;
 
 import com.example.dto.DoctorQueueResponse;
+import com.example.dto.JoinOptionResponse;
+import com.example.dto.JoinQueueDTO;
+import com.example.dto.PatientTicketResponse;
+import com.example.dto.PublicBoardResponse;
 import com.example.dto.QueueSummaryResponse;
 import com.example.dto.QueueTicketResponse;
 import com.example.dto.QueueTicketsResponse;
@@ -37,6 +41,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -56,8 +61,8 @@ public class QueueService {
     public static final String DONE = "DONE";
     public static final String SKIPPED = "SKIPPED";
 
-    /** Still in the queue: a second ticket for the same person would be a duplicate. */
-    private static final List<String> ACTIVE = List.of(WAITING, IN_CHAIR);
+    private static final String OPEN = "OPEN";
+    private static final String CLOSED = "CLOSED";
 
     /**
      * The only moves the desk may make. Anything else - reviving a finished
@@ -85,6 +90,7 @@ public class QueueService {
     private final PatientRepository patientRepository;
     private final ReceptionistRepository receptionistRepository;
     private final UserRepository userRepository;
+    private final QrSigner qrSigner;
 
     public QueueService(QueueRepository queueRepository,
             QueueTicketRepository ticketRepository,
@@ -93,7 +99,8 @@ public class QueueService {
             MedicalServiceRepository serviceRepository,
             PatientRepository patientRepository,
             ReceptionistRepository receptionistRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            QrSigner qrSigner) {
         this.queueRepository = queueRepository;
         this.ticketRepository = ticketRepository;
         this.doctorRepository = doctorRepository;
@@ -102,6 +109,7 @@ public class QueueService {
         this.patientRepository = patientRepository;
         this.receptionistRepository = receptionistRepository;
         this.userRepository = userRepository;
+        this.qrSigner = qrSigner;
     }
 
     /** Every doctor, with today's queue where one has been opened. */
@@ -129,8 +137,9 @@ public class QueueService {
                 .toList();
 
         // One clinic, one QR per day: it points at the join page for this
-        // date, and the patient chooses their doctor there.
-        return new QueueTodayResponse(date.toString(), "/join?date=" + date, doctors);
+        // date, and the patient chooses their doctor there. Signed, so a
+        // hand-typed or edited link is refused (QrSigner).
+        return new QueueTodayResponse(date.toString(), qrSigner.joinUrl(date), doctors);
     }
 
     /**
@@ -154,10 +163,38 @@ public class QueueService {
         Queue queue = queueRepository.findByDoctorAndQueueDate(doctor, date)
                 .orElseGet(() -> queueRepository.save(
                         new Queue(doctor, receptionistOf(userId), date)));
+        // Closed earlier today and the doctor is back: opening it again is
+        // the same button, not a second queue (one per doctor per day).
+        if (CLOSED.equals(queue.getStatus())) {
+            queue.setStatus(OPEN);
+            queueRepository.save(queue);
+        }
 
         boolean scheduled = !availabilityRepository
                 .findByDoctorAndDayOfWeek(doctor, date.getDayOfWeek().getValue()).isEmpty();
 
+        return DoctorQueueResponse.of(doctor, scheduled,
+                QueueSummaryResponse.of(queue,
+                        ticketRepository.countByQueueAndStatus(queue, WAITING)));
+    }
+
+    /**
+     * Closes a doctor's queue for the day: nobody new can join it, by QR or at
+     * the desk, and it leaves the patients' list and the public board. Those
+     * already in it can still be called in and finished.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public DoctorQueueResponse closeQueue(Integer queueId) {
+        queueRepository.lockById(queueId);
+        Queue queue = queueOrThrow(queueId);
+        requireToday(queue);
+        queue.setStatus(CLOSED);
+        queueRepository.save(queue);
+
+        Doctor doctor = queue.getDoctor();
+        boolean scheduled = !availabilityRepository
+                .findByDoctorAndDayOfWeek(doctor, queue.getQueueDate().getDayOfWeek().getValue())
+                .isEmpty();
         return DoctorQueueResponse.of(doctor, scheduled,
                 QueueSummaryResponse.of(queue,
                         ticketRepository.countByQueueAndStatus(queue, WAITING)));
@@ -188,7 +225,8 @@ public class QueueService {
         // number" and both trying to save it.
         queueRepository.lockById(queueId);
         Queue queue = queueOrThrow(queueId);
-        if (!"OPEN".equals(queue.getStatus())) {
+        requireToday(queue);
+        if (!OPEN.equals(queue.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "QUEUE_CLOSED",
                     "This queue is closed. Open it again to add anyone.");
         }
@@ -215,15 +253,8 @@ public class QueueService {
         Patient patient = patientRepository.findByPhoneNumberAndFullName(phone, fullName)
                 .orElseGet(() -> patientRepository.save(new Patient(fullName, phone)));
 
-        if (ticketRepository.existsByQueueAndPatientAndStatusIn(queue, patient, ACTIVE)) {
-            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_IN_QUEUE",
-                    fullName + " is already in this queue.");
-        }
-
-        Integer highest = ticketRepository.highestTicketNumber(queue);
-        QueueTicket ticket = new QueueTicket(queue, patient, service,
-                highest == null ? 1 : highest + 1);
-        ticketRepository.save(ticket);
+        requireNoActiveTicketToday(patient, fullName + " is");
+        QueueTicket ticket = issueTicket(queue, patient, service);
 
         // Read the board back so the new row carries the same position and
         // waiting time everyone else on it was just given.
@@ -241,6 +272,7 @@ public class QueueService {
     public QueueTicketsResponse changeStatus(Integer queueId, Integer ticketId, String wanted) {
         queueRepository.lockById(queueId);
         Queue queue = queueOrThrow(queueId);
+        requireToday(queue);
         QueueTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "TICKET_NOT_FOUND",
                         "That ticket was not found."));
@@ -276,6 +308,224 @@ public class QueueService {
         // waiting time behind them, so returning one row would leave the rest
         // of the screen wrong.
         return new QueueTicketsResponse(queueId, LocalDateTime.now().format(CLOCK), board(queue));
+    }
+
+    /* ── Patients: joining by the clinic QR, and following their ticket ────── */
+
+    /**
+     * The doctors a patient can choose after scanning today's clinic QR: only
+     * those whose queue is OPEN today. The QR is checked first, so an edited
+     * or old code gets a clear answer before the patient fills anything in.
+     */
+    @Transactional(readOnly = true)
+    public List<JoinOptionResponse> joinOptions(String date, String sig) {
+        qrSigner.check(date, sig);
+        return queueRepository.findByQueueDate(LocalDate.now()).stream()
+                .filter(q -> OPEN.equals(q.getStatus()))
+                .sorted(Comparator.comparing((Queue q) -> q.getDoctor().getDoctorId()))
+                .map(q -> new JoinOptionResponse(
+                        q.getDoctor().getDoctorId(),
+                        q.getDoctor().getUser().getFullName(),
+                        q.getDoctor().getSpecialization(),
+                        ticketRepository.countByQueueAndStatus(q, WAITING),
+                        waitForSomeoneJoiningNow(q)))
+                .toList();
+    }
+
+    /**
+     * Joins today's queue of the chosen doctor, from the QR's join page.
+     *
+     * Signed in (userId not null): the patient joins as themselves, and any
+     * name or phone in the request is ignored. Not signed in: name and phone
+     * are required, and the clinic's record for that pair is found or made,
+     * exactly as at the desk. The answer carries the ticket's access code,
+     * which is how someone without an account opens their ticket again.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public PatientTicketResponse join(Integer userId, JoinQueueDTO request) {
+        // Checked again here, never trusting that the page already did.
+        qrSigner.check(request.getDate(), request.getSig());
+
+        if (request.getDoctorId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "DOCTOR_REQUIRED",
+                    "Please choose a doctor.");
+        }
+        if (request.getServiceId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SERVICE_REQUIRED",
+                    "Please choose a treatment.");
+        }
+        ApiException notOpen = new ApiException(HttpStatus.CONFLICT, "QUEUE_NOT_OPEN",
+                "That doctor's queue is not open right now. Please choose another or ask at the desk.");
+        Doctor doctor = doctorRepository.findById(request.getDoctorId()).orElseThrow(() -> notOpen);
+        Queue found = queueRepository.findByDoctorAndQueueDate(doctor, LocalDate.now())
+                .orElseThrow(() -> notOpen);
+
+        // The same lock as the desk's walk-in, so a QR join and a desk walk-in
+        // at the same moment cannot take the same ticket number.
+        queueRepository.lockById(found.getQueueId());
+        Queue queue = queueOrThrow(found.getQueueId());
+        if (!OPEN.equals(queue.getStatus())) {
+            throw notOpen;
+        }
+        MedicalService service = serviceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
+                        "That treatment was not found."));
+
+        Patient patient = userId != null ? signedInPatient(userId) : walkInPatient(request);
+        requireNoActiveTicketToday(patient, "You are");
+
+        QueueTicket ticket = issueTicket(queue, patient, service);
+        return patientView(ticket, true);
+    }
+
+    /** The signed-in patient's ticket today, if they are still in a queue. */
+    @Transactional(readOnly = true)
+    public Optional<PatientTicketResponse> myTicket(Integer userId) {
+        Patient patient = signedInPatient(userId);
+        return ticketRepository.findActiveTicketForPatientOnDate(patient, LocalDate.now()).stream()
+                .findFirst()
+                .map(ticket -> patientView(ticket, false));
+    }
+
+    /**
+     * A ticket found by its access code, for patients without an account.
+     * Only today's: yesterday's code left in a browser means nothing today.
+     */
+    @Transactional(readOnly = true)
+    public PatientTicketResponse ticketByCode(String accessCode) {
+        QueueTicket ticket = ticketRepository.findByAccessCode(accessCode)
+                .filter(t -> t.getQueue().getQueueDate().equals(LocalDate.now()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "TICKET_NOT_FOUND",
+                        "That ticket was not found. It may be from another day."));
+        return patientView(ticket, false);
+    }
+
+    /**
+     * The waiting-room screen: every queue open today, with ticket numbers
+     * only. Public, so it must never carry anything that identifies anyone.
+     */
+    @Transactional(readOnly = true)
+    public List<PublicBoardResponse> publicBoard() {
+        return queueRepository.findByQueueDate(LocalDate.now()).stream()
+                .filter(q -> OPEN.equals(q.getStatus()))
+                .sorted(Comparator.comparing((Queue q) -> q.getDoctor().getDoctorId()))
+                .map(q -> {
+                    List<QueueTicketResponse> rows = board(q);
+                    List<PublicBoardResponse.Entry> entries = rows.stream()
+                            .filter(r -> IN_CHAIR.equals(r.getStatus()) || WAITING.equals(r.getStatus()))
+                            .map(r -> new PublicBoardResponse.Entry(
+                                    r.getTicket(), r.getStatus(), r.getEtaMinutes()))
+                            .toList();
+                    return new PublicBoardResponse(q.getDoctor().getDoctorId(),
+                            q.getDoctor().getUser().getFullName(), q.getStatus(),
+                            nowServing(rows), entries);
+                })
+                .toList();
+    }
+
+    /* ── Rules shared by the desk and the QR ─────────────────────────────── */
+
+    /**
+     * Only today's queue can be worked. Nothing closes a queue at midnight, so
+     * without this yesterday's queue would still take walk-ins.
+     */
+    private void requireToday(Queue queue) {
+        if (!queue.getQueueDate().equals(LocalDate.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, "QUEUE_NOT_TODAY",
+                    "This queue is from another day. Open today's queue instead.");
+        }
+    }
+
+    /**
+     * One active ticket (waiting or in the chair) per patient per day, across
+     * every doctor's queue (guide decision 9). Read as a List, so two rows
+     * left behind by an old bug still answer 409 rather than crash.
+     */
+    private void requireNoActiveTicketToday(Patient patient, String who) {
+        List<QueueTicket> active =
+                ticketRepository.findActiveTicketForPatientOnDate(patient, LocalDate.now());
+        if (!active.isEmpty()) {
+            String doctor = active.get(0).getQueue().getDoctor().getUser().getFullName();
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_IN_QUEUE",
+                    who + " already in " + doctor + "'s queue today.");
+        }
+    }
+
+    /** The next number in this queue. Call only while holding the queue's lock. */
+    private QueueTicket issueTicket(Queue queue, Patient patient, MedicalService service) {
+        Integer highest = ticketRepository.highestTicketNumber(queue);
+        QueueTicket ticket = new QueueTicket(queue, patient, service,
+                highest == null ? 1 : highest + 1);
+        return ticketRepository.save(ticket);
+    }
+
+    private Patient signedInPatient(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                        "Please sign in again."));
+        return patientRepository.findByUser(user)
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "NOT_A_PATIENT",
+                        "Only patients can join the queue this way. The desk adds walk-ins."));
+    }
+
+    /** Found by phone plus name, because a family shares one number. */
+    private Patient walkInPatient(JoinQueueDTO request) {
+        String fullName = trimmed(request.getFullName());
+        String phone = PhoneNumbers.normalise(request.getPhoneNumber());
+        if (fullName == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
+                    "Please enter your full name.");
+        }
+        if (!PhoneNumbers.isValidLebanese(phone)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
+                    "Please enter a valid Lebanese phone number.");
+        }
+        return patientRepository.findByPhoneNumberAndFullName(phone, fullName)
+                .orElseGet(() -> patientRepository.save(new Patient(fullName, phone)));
+    }
+
+    /**
+     * One ticket as its own patient sees it: position and wait come from the
+     * same board the desk reads, so the phone and the desk never disagree.
+     */
+    private PatientTicketResponse patientView(QueueTicket ticket, boolean withAccessCode) {
+        Queue queue = ticket.getQueue();
+        List<QueueTicketResponse> rows = board(queue);
+        QueueTicketResponse row = rows.stream()
+                .filter(r -> r.getTicketId().equals(ticket.getTicketId()))
+                .findFirst()
+                .orElseThrow();
+        return new PatientTicketResponse(ticket.getTicketId(), row.getTicket(), row.getStatus(),
+                row.getPosition(), row.getEtaMinutes(), queue.getDoctor().getUser().getFullName(),
+                ticket.getMedicalService().getServiceName(), nowServing(rows),
+                queue.getQueueDate().toString(), withAccessCode ? ticket.getAccessCode() : null);
+    }
+
+    private static String nowServing(List<QueueTicketResponse> rows) {
+        return rows.stream()
+                .filter(r -> IN_CHAIR.equals(r.getStatus()))
+                .map(QueueTicketResponse::getTicket)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * How long someone joining now would wait: what is left of the treatment
+     * in the chair, plus every treatment still waiting. The same sum the board
+     * gives the last person in line, carried one place further.
+     */
+    private int waitForSomeoneJoiningNow(Queue queue) {
+        List<QueueTicket> tickets = ticketRepository.findByQueue(queue);
+        int inChair = tickets.stream()
+                .filter(t -> IN_CHAIR.equals(t.getStatus()))
+                .findFirst()
+                .map(QueueService::minutesRemaining)
+                .orElse(0);
+        int waiting = tickets.stream()
+                .filter(t -> WAITING.equals(t.getStatus()))
+                .mapToInt(t -> t.getMedicalService().getDurationMinutes())
+                .sum();
+        return inChair + waiting;
     }
 
     /**
