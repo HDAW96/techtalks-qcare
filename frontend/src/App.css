@@ -624,6 +624,68 @@
   background: #fff;
 }
 
+/* Holds the QR's place while it is drawn, so nothing jumps when it appears. */
+.qr--empty {
+  display: inline-block;
+}
+
+/* A patient's own ticket: the number large, then what to do now. */
+.ticket-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s6);
+  align-items: center;
+  padding: var(--s6) var(--s5);
+}
+
+.ticket-card__body {
+  display: grid;
+  gap: var(--s2);
+}
+
+.ticket-card__what {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .ticket-card {
+    grid-template-columns: 1fr;
+    gap: var(--s4);
+  }
+}
+
+/* Choosing a doctor on the join page: one ruled row per open queue. */
+.join-doctor {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.join-doctor + .join-doctor {
+  margin-top: var(--s3);
+}
+
+.join-doctor:has(input:checked) {
+  border-color: var(--live);
+  box-shadow: inset 3px 0 0 var(--live);
+}
+
+.join-doctor__name {
+  font-weight: 600;
+}
+
+.join-doctor__wait {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .empty {
   padding: var(--s7) var(--s5);
   text-align: center;

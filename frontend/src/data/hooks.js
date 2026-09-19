@@ -1,40 +1,134 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { notifications as sampleNotifications, queue } from './mock'
+import { notifications as sampleNotifications } from './mock'
 import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
 
 /* The one place screens get clinic data from.
 
-   Sign-in, doctors, treatments, free times, appointments and the desk's queue
-   now come from the backend. Two things are still sample data from mock.js:
-   the patient-facing queue board, which has no endpoint of its own yet (the
-   desk endpoints carry names and are receptionist-only), and notifications,
-   which have no table in the ERD at all. Both are marked below so nobody
-   mistakes sample data for real. */
+   Everything comes from the backend except notifications, which have no table
+   in the ERD at all, so they are still sample data from mock.js (marked below
+   so nobody mistakes them for real). */
 
-/* The walk-in queue. SAMPLE DATA — no queue endpoints exist yet.
-   Pass the signed-in patient's id to mark their own ticket as `you`; without
-   one (the public board) no ticket is anyone's. Patient ids never leave this
-   hook. */
-export function useQueue(patientId) {
-  return useMemo(() => {
-    const entries = queue.entries.map(({ patientId: owner, ...entry }) => ({
-      ...entry,
-      you: patientId != null && owner === patientId,
-    }))
-    const yours = entries.findIndex((e) => e.you)
+/* ── LIVE DATA ───────────────────────────────────────────────────────
+   The queue changes while people watch it, so these screens ask again every
+   15 seconds (SCRUM-56 guide: polling, not WebSockets). Only while the tab is
+   visible: a phone in a pocket should not keep asking. */
 
-    return {
-      updatedAt: queue.updatedAt,
-      entries,
-      nowServing:
-        entries.find((e) => e.status === TICKET_STATUS.IN_CHAIR)?.ticket ?? null,
-      yourTicket: yours === -1 ? null : entries[yours],
-      // Everyone in front of you, the person in the chair included.
-      ahead: yours === -1 ? 0 : yours,
-      sample: true,
+const POLL_MS = 15000
+
+/* Calls `onTick` every POLL_MS while the page is visible, and at once when it
+   becomes visible again: a patient unlocking their phone should see their
+   place now, not up to 15 seconds later. Nothing is asked while hidden.
+   `onTick` must be stable (a state setter, or wrapped in useCallback). */
+function useEveryFewSeconds(onTick, enabled = true) {
+  useEffect(() => {
+    if (!enabled) return undefined
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') onTick()
+    }, POLL_MS)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') onTick()
     }
-  }, [patientId])
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [onTick, enabled])
+}
+
+/* GETs `path` now and every POLL_MS after, until `path` changes or becomes
+   null. The answer is stored with the path it was fetched for, so a previous
+   path's data is never shown under a new one. A failed refresh keeps the last
+   good answer on screen and reports the error beside it: a moment without
+   signal should not blank a patient's ticket. */
+function usePolled(path) {
+  const [result, setResult] = useState({ key: null, data: null, error: null })
+  const [tick, setTick] = useState(0)
+  const bump = useCallback(() => setTick((n) => n + 1), [])
+  useEveryFewSeconds(bump, Boolean(path))
+
+  useEffect(() => {
+    if (!path) return undefined
+    let cancelled = false
+    apiGet(path)
+      .then((data) => {
+        if (!cancelled) setResult({ key: path, data, error: null })
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setResult((prev) => ({ key: path, data: prev.key === path ? prev.data : null, error }))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [path, tick])
+
+  const reload = useCallback(() => setTick((n) => n + 1), [])
+  const current = result.key === path
+  return {
+    data: current ? result.data : null,
+    error: current ? result.error : null,
+    loading: Boolean(path) && !current,
+    reload,
+  }
+}
+
+const NO_QUEUES = []
+
+/* GET /api/queues/today/board: every queue open today, ticket numbers only.
+   Public, so it is safe on the home page and on any patient's phone. */
+export function usePublicBoard() {
+  const { data, error, loading } = usePolled('/queues/today/board')
+  return { queues: data ?? NO_QUEUES, error, loading }
+}
+
+/* The patient's own ticket today. `source` is { me: true } for a signed-in
+   patient, { code } for someone who joined without an account, or null when
+   there is nothing to look up. `ticket` is null when they are in no queue. */
+export function useMyTicket(source) {
+  const path = source?.me
+    ? '/tickets/me'
+    : source?.code
+      ? `/tickets/by-code/${encodeURIComponent(source.code)}`
+      : null
+  const { data, error, loading } = usePolled(path)
+  return { ticket: data, error, loading }
+}
+
+/* GET /api/queues/join-options: the doctors a patient can choose after
+   scanning today's QR. Refreshed like the rest, so waiting counts stay true
+   while the patient fills in the form. */
+export function useJoinOptions(date, sig) {
+  const path =
+    date && sig
+      ? `/queues/join-options?date=${encodeURIComponent(date)}&sig=${encodeURIComponent(sig)}`
+      : null
+  const { data, error, loading } = usePolled(path)
+  return { options: data ?? NO_QUEUES, error, loading }
+}
+
+/* POST /api/queues/join. Sends the sign-in token when there is one, so a
+   signed-in patient joins as themselves; otherwise the body carries a name
+   and phone number. The answer includes the ticket's access code. */
+export function joinQueue(details) {
+  return apiPost('/queues/join', details)
+}
+
+/* A ticket as the patient-facing QueueBoard draws it: the ticket number and
+   a wait. `yours` marks the viewer's own ticket; nobody else is named. */
+export function boardEntries(entries, yours) {
+  return entries.map((e) => ({
+    ticket: e.ticket,
+    status: e.status,
+    eta: e.status === TICKET_STATUS.IN_CHAIR ? 'now' : waitLabel(e.etaMinutes),
+    you: yours != null && e.ticket === yours,
+  }))
+}
+
+export function waitLabel(minutes) {
+  if (minutes == null) return ''
+  return minutes === 0 ? 'next' : `~${minutes} min`
 }
 
 /* The signed-in patient's own appointments, from the server.
@@ -276,8 +370,12 @@ export function useTodaysDoctors() {
   const [today, setToday] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  /* Bumped after opening a queue, which re-runs the fetch below. */
+  /* Bumped after opening or closing a queue, and every POLL_MS, which
+     re-runs the fetch below. The poll is what shows one receptionist what
+     the other just did. */
   const [reloads, setReloads] = useState(0)
+  const bump = useCallback(() => setReloads((n) => n + 1), [])
+  useEveryFewSeconds(bump)
 
   useEffect(() => {
     let cancelled = false
@@ -307,14 +405,23 @@ export function useTodaysDoctors() {
     return opened
   }, [])
 
+  /* Nobody new can join a closed queue; those already in it can still be
+     called in. Opening it again (openQueue) reopens the same queue. */
+  const closeQueue = useCallback(async (queueId) => {
+    const closed = await apiPost(`/queues/${queueId}/close`)
+    setReloads((n) => n + 1)
+    return closed
+  }, [])
+
   return useMemo(() => ({
     date: today?.date ?? null,
     qrUrl: today?.qrUrl ?? null,
     doctors: today?.doctors ?? NO_DOCTORS,
     openQueue,
+    closeQueue,
     loading,
     error,
-  }), [today, openQueue, loading, error])
+  }), [today, openQueue, closeQueue, loading, error])
 }
 
 /* GET /api/queues/{queueId}/tickets: one doctor's queue, with names.
@@ -330,6 +437,11 @@ export function useDeskQueue(queueId) {
      that an error about one queue cannot linger over another. Same idea as
      `useAvailability` above. */
   const [result, setResult] = useState({ key: null })
+  /* Bumped every POLL_MS so walk-ins added at the other desk, and patients
+     joining by QR, appear without anyone pressing anything. */
+  const [refresh, setRefresh] = useState(0)
+  const bump = useCallback(() => setRefresh((n) => n + 1), [])
+  useEveryFewSeconds(bump, Boolean(queueId))
 
   useEffect(() => {
     if (!queueId) return undefined
@@ -339,12 +451,17 @@ export function useDeskQueue(queueId) {
         if (!cancelled) setResult({ key: queueId, data })
       })
       .catch((error) => {
-        if (!cancelled) setResult({ key: queueId, error })
+        // A failed refresh keeps the board on screen; only a queue that has
+        // never loaded shows the error instead of rows.
+        if (cancelled) return
+        setResult((prev) =>
+          prev.key === queueId && prev.data ? prev : { key: queueId, error },
+        )
       })
     return () => {
       cancelled = true
     }
-  }, [queueId])
+  }, [queueId, refresh])
 
   const current = result.key === queueId ? result : null
 

@@ -146,14 +146,30 @@ on a screen's appearance; nothing is saved anywhere.
 | Free times and booking | Real — the server works out the slots |
 | A patient's appointments | Real — including reschedule and cancel |
 | Reception: a day's appointments | Real — list any day, reschedule any appointment |
-| The desk's walk-in queue | Real — open a queue, add walk-ins, call in, skip, finish; live position and wait time |
+| The desk's walk-in queue | Real — open, close and reopen a queue, add walk-ins, call in, skip, finish; live position and wait time; refreshes itself every 15 seconds |
 | Receptionist sign-in and dashboard | Real — the same sign-in form, at `/reception` |
-| Joining the queue by QR (`/join`) and a patient's own ticket | Not built yet — the desk's QR points at a page that does not exist yet |
-| Patient-facing queue board | **Sample data** — the desk endpoints carry names, so the public board needs its own |
+| Joining the queue by QR (`/join`) | Real — the desk shows a signed daily QR code; a patient picks an open doctor and a treatment and joins, with or without an account; one ticket per person per day |
+| A patient's own ticket (`/ticket`, and the dashboard) | Real — number, people ahead, wait, now serving; refreshes every 15 seconds and at once when the phone is unlocked |
+| Public queue board (home page) | Real — ticket numbers and waits only, no names |
 | Notifications | **Sample data** — no table exists in the ERD yet |
 | Profile | Read-only — name and phone number are changed at the desk |
 | Check in booked patient / Find patient / Give up my place | Shown disabled — not built yet |
 | Doctor screens | Not built |
+
+### Scanning the QR code with a real phone
+
+The QR code links to `QCARE_FRONTEND_URL` (default `http://localhost:5173`),
+which a phone cannot reach. To try it on a phone on the same Wi-Fi, use the
+laptop's network address (shown by `ipconfig`, e.g. `192.168.1.20`) in three places:
+
+```powershell
+# backend: where the QR points, and which frontend may call the API
+$env:QCARE_FRONTEND_URL = 'http://192.168.1.20:5173'
+$env:QCARE_CORS_ORIGINS = 'http://localhost:5173,http://192.168.1.20:5173'
+# frontend: where the phone finds the API, and listen on the network
+$env:VITE_API_BASE_URL = 'http://192.168.1.20:8080/api'
+npm run dev -- --host
+```
 
 ### Signing in as the receptionist
 

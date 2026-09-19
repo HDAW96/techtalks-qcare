@@ -54,8 +54,16 @@ public class SecurityConfig {
                         // Browsers send an unauthenticated OPTIONS request
                         // before a cross-origin call.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Every queue endpoint answers with patients' names and
-                        // phone numbers, so being signed in is not enough -
+                        // Behind the clinic QR and on the waiting-room screen:
+                        // public, and none of them carries a name. These must
+                        // come before the desk rule below, because the first
+                        // rule that matches wins.
+                        .requestMatchers(HttpMethod.GET, "/api/queues/join-options",
+                                "/api/queues/today/board", "/api/tickets/by-code/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/queues/join").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/tickets/me").hasRole("PATIENT")
+                        // Every other queue endpoint answers with patients' names
+                        // and phone numbers, so being signed in is not enough -
                         // only the front desk may read or move the queue.
                         .requestMatchers("/api/queues/**").hasRole("RECEPTIONIST")
                         .anyRequest().authenticated())

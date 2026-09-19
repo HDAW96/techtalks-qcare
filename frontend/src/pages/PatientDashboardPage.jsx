@@ -6,7 +6,7 @@ import QueueBoard from '../components/QueueBoard'
 import Legend from '../components/Legend'
 import Mark from '../components/Mark'
 import Cell from '../components/Cell'
-import QrPlaceholder from '../components/QrPlaceholder'
+import TicketCard from '../components/TicketCard'
 import BookingFlow from '../components/BookingFlow'
 import RescheduleAppointment from '../components/RescheduleAppointment'
 import { BOOKING_STEPS, useBookingDraft } from '../components/useBookingDraft'
@@ -16,7 +16,9 @@ import {
   useAppointments,
   useAvailability,
   useNotifications,
-  useQueue,
+  boardEntries,
+  useMyTicket,
+  usePublicBoard,
 } from '../data/hooks'
 import { formatDay, formatRecordNumber, formatTime } from '../data/format'
 import { APPOINTMENT_STATUS, STATUS_MARK } from '../constants'
@@ -44,12 +46,6 @@ const APPOINTMENT_LABEL = {
   [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
   [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
   [APPOINTMENT_STATUS.MISSED]: 'Missed',
-}
-
-function aheadOfYou(count) {
-  if (count === 0) return 'You are at the front of the queue'
-  if (count === 1) return 'One person ahead of you'
-  return `${count} people ahead of you`
 }
 
 function SheetHead({ title, note, right }) {
@@ -170,7 +166,10 @@ function NoTicket() {
 
 function PatientDashboardPage() {
   const { user, signOut } = useAuth()
-  const queue = useQueue(user.patientId)
+  // Their real ticket today, if any, and their doctor's line (numbers only).
+  const { ticket: yourTicket } = useMyTicket({ me: true })
+  const { queues } = usePublicBoard()
+  const myQueue = yourTicket ? queues.find((q) => q.doctorName === yourTicket.doctorName) : null
   const appointments = useAppointments()
   const notifications = useNotifications()
   const booking = useBookingDraft()
@@ -244,7 +243,6 @@ function PatientDashboardPage() {
     }
   }
 
-  const { yourTicket } = queue
   const { markAllRead } = notifications
 
   // Opening the notifications is what reads them.
@@ -353,27 +351,16 @@ function PatientDashboardPage() {
               <div className="sheet">
                 <SheetHead
                   title="Your queue ticket"
-                  note={`${clinic.name} · updated ${queue.updatedAt}`}
+                  note={`${clinic.name} · updates every 15 seconds`}
                   right={yourTicket ? 'Live' : undefined}
                 />
                 {yourTicket ? (
                   <>
-                    <div className="ticket">
-                      <QrPlaceholder code={yourTicket.ticket} />
-                      <div className="now">
-                        <span className="meta">Your number</span>
-                        <span className="now__num">{yourTicket.ticket}</span>
-                        <p style={{ marginTop: 8 }}>
-                          {aheadOfYou(queue.ahead)} — about {yourTicket.eta} left.
-                        </p>
-                        <p>
-                          <span className="synthetic">Sample data</span>
-                        </p>
-                      </div>
-                    </div>
-                    <Legend items={['live', 'wait']} />
-                    <div className="sheet__body" style={{ paddingBlock: 16 }}>
-                      <QueueBoard entries={queue.entries} />
+                    <TicketCard ticket={yourTicket} />
+                    <div className="sheet__foot">
+                      <button type="button" className="btn btn--quiet" onClick={() => open('ticket')}>
+                        See the whole line
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -475,28 +462,20 @@ function PatientDashboardPage() {
             <div className="sheet">
               <SheetHead
                 title="Walk-in queue"
-                note={`${clinic.name} · updated ${queue.updatedAt}`}
+                note={`${clinic.name} · updates every 15 seconds`}
                 right={yourTicket ? 'Live' : undefined}
               />
               {yourTicket ? (
                 <>
-                  <div className="ticket">
-                    <QrPlaceholder code={yourTicket.ticket} />
-                    <div className="now">
-                      <span className="meta">Now serving</span>
-                      <span className="now__num">{queue.nowServing}</span>
-                      <p style={{ marginTop: 8 }}>
-                        You hold {yourTicket.ticket} — about {yourTicket.eta} left.
-                      </p>
-                      <p>
-                        <span className="synthetic">Sample data</span>
-                      </p>
-                    </div>
-                  </div>
-                  <Legend items={['live', 'wait']} />
-                  <div className="sheet__body" style={{ paddingBlock: 16 }}>
-                    <QueueBoard entries={queue.entries} />
-                  </div>
+                  <TicketCard ticket={yourTicket} />
+                  {myQueue && myQueue.entries.length > 0 && (
+                    <>
+                      <Legend items={['live', 'wait']} />
+                      <div className="sheet__body" style={{ paddingBlock: 16 }}>
+                        <QueueBoard entries={boardEntries(myQueue.entries, yourTicket.ticket)} />
+                      </div>
+                    </>
+                  )}
                   <div className="sheet__foot">
                     {/* Leaving the queue needs the patient ticket endpoints
                         (SCRUM-56). Shown disabled rather than hidden, like the

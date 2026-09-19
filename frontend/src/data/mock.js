@@ -1,4 +1,4 @@
-import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
+import { APPOINTMENT_STATUS } from '../constants'
 
 /* Demonstration data for the Phase 1 sketch screens.
    None of this is real: QCare has no live clinics, patients or bookings yet.
@@ -12,20 +12,6 @@ export const clinic = {
   area: 'Mina, Tripoli',
   phone: '+961 6 000 000',
   hours: 'Mon–Sat, 09:00 – 18:00',
-}
-
-/* The live walk-in queue, front first. Patient-facing screens get ticket
-   numbers only — never other patients' names. patientId 44 is the sample
-   signed-in patient (see auth/AuthProvider.jsx). */
-export const queue = {
-  updatedAt: '12:41',
-  entries: [
-    { ticket: 'A-14', patientId: 51, status: TICKET_STATUS.IN_CHAIR, eta: 'now' },
-    { ticket: 'A-15', patientId: 38, status: TICKET_STATUS.WAITING, eta: '~8 min' },
-    { ticket: 'A-16', patientId: 44, status: TICKET_STATUS.WAITING, eta: '~21 min' },
-    { ticket: 'A-17', patientId: 62, status: TICKET_STATUS.WAITING, eta: '~34 min' },
-    { ticket: 'A-18', patientId: 17, status: TICKET_STATUS.WAITING, eta: '~45 min' },
-  ],
 }
 
 /* Appointments and queues are per-doctor in the ERD, so booking has to pick

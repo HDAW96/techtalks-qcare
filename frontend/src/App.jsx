@@ -5,6 +5,8 @@ import RegisterPage from './pages/RegisterPage'
 import PatientDashboardPage from './pages/PatientDashboardPage'
 import ReceptionPage from './pages/ReceptionPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
+import JoinPage from './pages/JoinPage'
+import TicketPage from './pages/TicketPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RequireAuth from './auth/RequireAuth'
 import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
@@ -49,6 +51,10 @@ function App() {
           </RequireAuth>
         }
       />
+      {/* Public: where the clinic QR leads, and a patient's own ticket. Joining
+          works with or without an account. */}
+      <Route path="/join" element={<JoinPage />} />
+      <Route path="/ticket" element={<TicketPage />} />
       {/* Any signed-in role. */}
       <Route
         path="/change-password"
