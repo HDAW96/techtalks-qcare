@@ -109,6 +109,20 @@ npm run dev
 
 Open **http://localhost:5173**.
 
+### After every `git pull`
+
+`git pull` brings new code but does not install new libraries. If someone
+added one, the frontend stops with an error like
+`Failed to resolve import "qrcode"`. Run this after pulling:
+
+```bash
+cd frontend
+npm install
+```
+
+It is safe to run every time; it does nothing when nothing changed. The
+backend needs no extra step — `mvnw` fetches new libraries by itself.
+
 ### The three ports
 
 | Port | What |
