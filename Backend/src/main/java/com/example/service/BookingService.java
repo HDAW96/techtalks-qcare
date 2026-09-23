@@ -405,4 +405,56 @@ public class BookingService {
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "NOT_A_PATIENT",
                         "Only patients can book appointments."));
     }
+
+    @Transactional
+    public AppointmentResponse complete(Integer userId, Integer appointmentId, String clinicalNotes) {
+
+    // Get the appointment
+    Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "APPOINTMENT_NOT_FOUND",
+                    "Appointment not found."
+            ));
+
+    // Make sure the signed-in user is a doctor
+    User user = userRepository.findById(userId).orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "USER_NOT_FOUND",
+                    "User not found."
+            ));
+
+    Doctor doctor = doctorRepository.findByUser(user)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "NOT_A_DOCTOR",
+                    "Only doctors can complete appointments."
+            ));
+
+    // Make sure this appointment belongs to this doctor
+    if (!appointment.getDoctor().getDoctorId().equals(doctor.getDoctorId())) {
+        throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "NOT_YOUR_APPOINTMENT",
+                "You can only complete your own appointments."
+        );
+    }
+
+    // Only BOOKED appointments can be completed
+    if (!"BOOKED".equals(appointment.getStatus())) {
+        throw new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_APPOINTMENT_STATUS",
+                "Only booked appointments can be completed."
+        );
+    }
+
+    // Complete the appointment
+    appointment.setStatus("COMPLETED");
+    appointment.setClinicalNotes(clinicalNotes);
+
+    appointmentRepository.save(appointment);
+
+    return AppointmentResponse.of(appointment);
+}
 }
