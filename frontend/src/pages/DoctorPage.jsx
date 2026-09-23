@@ -13,7 +13,7 @@ function DoctorPage() {
   const appointments = schedule?.appointments ?? []
 
   return (
-    <div className="page">
+    <div className="page doctor-page">
       <SiteHeader />
 
       <main className="wrap stack">

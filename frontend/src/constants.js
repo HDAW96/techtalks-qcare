@@ -23,15 +23,11 @@ export const ROLE = {
   DOCTOR: 'DOCTOR',
   RECEPTIONIST: 'RECEPTIONIST',
 }
-
 /* Which screen a signed-in user lands on. One sign-in form serves everyone,
    so this is what makes it open the right thing: the role on the account
-   decides, not a separate staff login. The doctor screen is not built yet and
-   falls back to the patient record until it is. */
+   decides, not a separate staff login. */
 export const HOME_ROUTE_FOR_ROLE = {
   [ROLE.PATIENT]: '/dashboard',
-  // No doctor screen exists yet. The home page is honest about that; the
-  // patient dashboard would only refuse them.
   [ROLE.DOCTOR]: '/doctor',
   [ROLE.RECEPTIONIST]: '/reception',
 }

@@ -106,10 +106,10 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
-/* Adding top spacing to all main content sections globally */
-main.wrap,
-main.desk-container,
-.page > main {
+
+/* Top spacing scoped to the doctor page only — see .doctor-page class */
+.doctor-page > main {
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
+
 }
