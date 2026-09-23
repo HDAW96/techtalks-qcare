@@ -1,11 +1,11 @@
 package com.example.dto;
 
-public class TreatmentCompletionNotes 
+public class TreatmentCompletion
 {
   private String clinicalNotes;
   
  public String getClinicalNotes(){
-    return clinicNotes;
+    return clinicalNotes;
   }
 
   public void setClinicalNotes(String clinicalNotes){
