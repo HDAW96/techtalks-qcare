@@ -32,7 +32,7 @@ export const HOME_ROUTE_FOR_ROLE = {
   [ROLE.PATIENT]: '/dashboard',
   // No doctor screen exists yet. The home page is honest about that; the
   // patient dashboard would only refuse them.
-  [ROLE.DOCTOR]: '/',
+  [ROLE.DOCTOR]: '/doctor',
   [ROLE.RECEPTIONIST]: '/reception',
 }
 
@@ -44,6 +44,7 @@ export const HOME_ROUTE_FOR_ROLE = {
 export const ROUTE_ROLES = {
   '/dashboard': [ROLE.PATIENT],
   '/reception': [ROLE.RECEPTIONIST],
+  '/doctor': [ROLE.DOCTOR],
 }
 
 /* Maps a backend status onto the four marks the UI legend defines
@@ -59,3 +60,4 @@ export const STATUS_MARK = {
   [TICKET_STATUS.DONE]: 'done',
   [TICKET_STATUS.SKIPPED]: 'miss',
 }
+
