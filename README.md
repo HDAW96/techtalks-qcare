@@ -31,7 +31,7 @@
 | :--- | :--- |
 | **Hadi Abdulhakim Awad** | Team Leader & Fullstack Developer|
 | **Jouri Said** | Backend Developer |
-| **Hassan El Hussein** | Frontend Developer |
+| **Hassan El Hussein** | Fullstack Developer |
 | **Mohammed Itani** | Backend Developer |
 | **Mohammed Dakdouk** | Frontend Developer |
 
