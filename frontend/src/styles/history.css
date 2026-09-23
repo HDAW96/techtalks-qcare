@@ -1,0 +1,145 @@
+/* The patient history panel (PatientHistoryButton). Every rule is scoped to
+   .history: Vite bundles all CSS into one file, so a bare class here would
+   restyle other screens too. */
+
+/* A sheet slid in from the right edge, full height, so the dashboard stays
+   visible beside it. On a phone it takes the whole screen. */
+.history {
+  inset: 0 0 0 auto;
+  width: min(460px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--lift-high);
+}
+
+.history[open] {
+  animation: history-in 320ms var(--rise-ease) both;
+}
+
+.history::backdrop {
+  background: rgba(14, 58, 71, 0.32);
+}
+
+@keyframes history-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.history__sheet {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+.history__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.history__head h2 {
+  margin: var(--s1) 0 0;
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+
+.history__close {
+  flex: none;
+}
+
+.history__body {
+  overflow-y: auto;
+  padding: var(--s5);
+}
+
+.history__state {
+  margin: 0;
+  color: var(--ink-soft);
+  max-width: 40ch;
+}
+
+.history__error {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+}
+
+/* A ruled record: date down the left, what was done on the right, one
+   hairline between visits. */
+.history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history__visit {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--s4);
+  padding: var(--s4) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.history__visit:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.history__when {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history__when span {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.history__what > p {
+  margin: 0;
+}
+
+.history__service {
+  font-weight: 600;
+}
+
+.history__what > .history__notes {
+  margin-top: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--done-wash);
+  border-left: 2px solid var(--rule-strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .history {
+    border-left: 0;
+  }
+
+  .history__visit {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s1);
+  }
+}

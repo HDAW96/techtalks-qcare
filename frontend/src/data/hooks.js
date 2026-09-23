@@ -250,6 +250,43 @@ export function useDayAppointments(date) {
   }
 }
 
+/* One patient's finished treatments, newest first, for the doctor.
+   Real data: GET /api/doctors/patients/{id}/history, doctors only (anyone
+   else gets 403, which `error` carries). Asked once, not polled: a history
+   does not change while the doctor reads it. Pass null to ask nothing, e.g.
+   while the panel is closed. */
+export function usePatientHistory(patientId) {
+  // Stored with the patient it was fetched for, so one patient's visits are
+  // never shown under another's name.
+  const [result, setResult] = useState({ key: null, data: null, error: null })
+  const [reloads, setReloads] = useState(0)
+  const key = patientId == null ? null : `${patientId}:${reloads}`
+
+  useEffect(() => {
+    if (key == null) return undefined
+    let cancelled = false
+    apiGet(`/doctors/patients/${patientId}/history`)
+      .then((data) => {
+        if (!cancelled) setResult({ key, data, error: null })
+      })
+      .catch((error) => {
+        if (!cancelled) setResult({ key, data: null, error })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [key, patientId])
+
+  const reload = useCallback(() => setReloads((n) => n + 1), [])
+  const current = key != null && result.key === key
+  return {
+    history: current ? result.data : null,
+    error: current ? result.error : null,
+    loading: key != null && !current,
+    reload,
+  }
+}
+
 /* SAMPLE DATA — the ERD has no notifications table, so there is nothing to
    read these from. They stay local until the team adds one. */
 export function useNotifications() {
