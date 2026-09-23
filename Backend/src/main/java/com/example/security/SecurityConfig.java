@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,6 +14,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+// Without this, @PreAuthorize on a service method is silently ignored - the
+// annotation reads as protection that is not there. DoctorScheduleService is
+// the first to use it.
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -52,6 +57,10 @@ public class SecurityConfig {
                         // too, so they must be locked down before the public
                         // doctor list below - the first rule that matches wins.
                         .requestMatchers("/api/doctors/patients/**").hasRole("DOCTOR")
+                        // A doctor's own day carries their patients' names, so
+                        // it is locked down here for the same reason and, like
+                        // the rule above, before the public doctor list.
+                        .requestMatchers("/api/doctors/me/**").hasRole("DOCTOR")
                         // Anyone may see which doctors and services exist -
                         // the booking screen shows these before sign-in.
                         .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/services/**").permitAll()

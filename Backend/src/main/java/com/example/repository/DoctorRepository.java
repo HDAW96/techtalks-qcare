@@ -1,6 +1,7 @@
 package com.example.repository;
 
 import com.example.entity.Doctor;
+import com.example.entity.User;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -16,6 +17,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, Integer> {
      * (SELECT ... FOR UPDATE). Booking takes it before checking for clashes,
      * so two bookings for the same doctor run one after the other.
      */
+    /** The doctor record behind a signed-in staff account. */
+    Optional<Doctor> findByUser(User user);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Doctor d where d.doctorId = :id")
     Optional<Doctor> lockById(@Param("id") Integer id);
