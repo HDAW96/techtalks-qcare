@@ -1,11 +1,15 @@
 package com.example.service;
 
+import com.example.dto.DoctorLeaveDTO;
+import com.example.dto.DoctorLeaveResponse;
 import com.example.dto.DoctorScheduleDTO;
 import com.example.entity.Doctor;
+import com.example.entity.DoctorLeave;
 import com.example.entity.Queue;
 import com.example.entity.QueueTicket;
 import com.example.entity.User;
 import com.example.repository.AppointmentRepository;
+import com.example.repository.DoctorLeaveRepository;
 import com.example.repository.DoctorRepository;
 import com.example.repository.QueueRepository;
 import com.example.repository.QueueTicketRepository;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -36,17 +41,20 @@ public class DoctorScheduleService {
     private final AppointmentRepository appointmentRepository;
     private final QueueRepository queueRepository;
     private final QueueTicketRepository ticketRepository;
+    private final DoctorLeaveRepository leaveRepository;
 
     public DoctorScheduleService(UserRepository userRepository,
             DoctorRepository doctorRepository,
             AppointmentRepository appointmentRepository,
             QueueRepository queueRepository,
-            QueueTicketRepository ticketRepository) {
+            QueueTicketRepository ticketRepository,
+            DoctorLeaveRepository leaveRepository) {
         this.userRepository = userRepository;
         this.doctorRepository = doctorRepository;
         this.appointmentRepository = appointmentRepository;
         this.queueRepository = queueRepository;
         this.ticketRepository = ticketRepository;
+        this.leaveRepository = leaveRepository;
     }
 
     /**
@@ -84,6 +92,61 @@ public class DoctorScheduleService {
         }
         List<QueueTicket> called = ticketRepository.findByQueueAndStatusFetched(queue, IN_CHAIR);
         return called.isEmpty() ? null : called.get(0);
+    }
+
+    /**
+     * Blocks a range of calendar days for the signed-in doctor - vacation or
+     * sick leave. BookingService reads this same table, through the same
+     * DoctorLeaveRepository.existsForDoctorOnDate query, so a day blocked
+     * here disappears from the booking screen and refuses a booking or
+     * reschedule the moment it is saved.
+     *
+     * Deliberately does not touch appointments already BOOKED inside the new
+     * range - resolving that clash (cancel them? refuse the leave?) is a
+     * desk decision, not one this endpoint should make silently.
+     */
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Transactional
+    public DoctorLeaveResponse addLeave(Integer userId, DoctorLeaveDTO request) {
+        Doctor doctor = doctorOf(userId);
+        LocalDate start = parseDate(request.getStartDate(), "startDate");
+        LocalDate end = parseDate(request.getEndDate(), "endDate");
+
+        if (end.isBefore(start)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LEAVE_RANGE_INVALID",
+                    "The end date must not be before the start date.");
+        }
+        if (end.isBefore(LocalDate.now())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LEAVE_RANGE_INVALID",
+                    "That leave has already passed. Please choose a current or future date.");
+        }
+
+        DoctorLeave leave = new DoctorLeave(doctor, start, end);
+        leaveRepository.save(leave);
+        return DoctorLeaveResponse.of(leave);
+    }
+
+    /** The signed-in doctor's own leave, earliest first, so they can review it. */
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Transactional(readOnly = true)
+    public List<DoctorLeaveResponse> myLeave(Integer userId) {
+        Doctor doctor = doctorOf(userId);
+        return leaveRepository.findByDoctorOrderByStartDateAsc(doctor).stream()
+                .map(DoctorLeaveResponse::of)
+                .toList();
+    }
+
+    private LocalDate parseDate(String date, String field) {
+        if (date == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LEAVE_RANGE_INVALID",
+                    "Please provide a " + field + ".");
+        }
+        try {
+            return LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LEAVE_RANGE_INVALID",
+                    "That " + field + " is not a valid date.");
+        }
     }
 
     /**

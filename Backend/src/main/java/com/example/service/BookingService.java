@@ -12,6 +12,7 @@ import com.example.entity.Patient;
 import com.example.entity.User;
 import com.example.repository.AppointmentRepository;
 import com.example.repository.DoctorAvailabilityRepository;
+import com.example.repository.DoctorLeaveRepository;
 import com.example.repository.DoctorRepository;
 import com.example.repository.MedicalServiceRepository;
 import com.example.repository.PatientRepository;
@@ -43,6 +44,7 @@ public class BookingService {
     private final DoctorRepository doctorRepository;
     private final MedicalServiceRepository serviceRepository;
     private final DoctorAvailabilityRepository availabilityRepository;
+    private final DoctorLeaveRepository leaveRepository;
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
 
@@ -50,12 +52,14 @@ public class BookingService {
             DoctorRepository doctorRepository,
             MedicalServiceRepository serviceRepository,
             DoctorAvailabilityRepository availabilityRepository,
+            DoctorLeaveRepository leaveRepository,
             PatientRepository patientRepository,
             UserRepository userRepository) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
         this.availabilityRepository = availabilityRepository;
+        this.leaveRepository = leaveRepository;
         this.patientRepository = patientRepository;
         this.userRepository = userRepository;
     }
@@ -127,8 +131,13 @@ public class BookingService {
             List<DoctorAvailability> windows = availabilityRepository
                     .findByDoctorAndDayOfWeek(doctor, date.getDayOfWeek().getValue());
 
-            if (windows.isEmpty()) {
-                // The doctor does not work this weekday at all.
+            // A day the doctor is on leave is shown exactly like a
+            // non-clinic day (an empty slot list) - the day strip already
+            // reads an empty list as "Not working" rather than "Full"
+            // (see SlotPicker.jsx), so leave needs no new label of its own.
+            boolean onLeave = leaveRepository.existsForDoctorOnDate(doctor, date);
+            if (windows.isEmpty() || onLeave) {
+                // The doctor does not work this weekday at all, or is away.
                 result.add(new DayAvailabilityResponse(date.toString(), List.of()));
                 continue;
             }
@@ -290,6 +299,14 @@ public class BookingService {
         if (!when.isAfter(LocalDateTime.now())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "DATETIME_PAST",
                     "That time has already passed. Please choose another.");
+        }
+
+        // Checked before working hours on purpose: a doctor on leave that
+        // day is the more useful reason to show a patient, rather than
+        // "outside hours" for a day that would otherwise have been open.
+        if (leaveRepository.existsForDoctorOnDate(doctor, when.toLocalDate())) {
+            throw new ApiException(HttpStatus.CONFLICT, "DOCTOR_ON_LEAVE",
+                    "This doctor is on leave that day. Please choose another date.");
         }
 
         int duration = service.getDurationMinutes();

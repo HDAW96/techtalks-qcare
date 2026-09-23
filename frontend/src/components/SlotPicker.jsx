@@ -12,6 +12,10 @@ function SlotPicker({ availability, minutes, day, time, onDay, onTime }) {
       </p>
       <div className="picks" style={{ marginBottom: 32 }}>
         {availability.map((d) => {
+          /* Two different reasons a day can't be booked, and patients read
+             them very differently: the doctor holds no clinic that day, or
+             the day is real but every time is taken. */
+          const noClinic = d.slots.length === 0
           const full = d.openCount === 0
           return (
             <button
@@ -24,9 +28,11 @@ function SlotPicker({ availability, minutes, day, time, onDay, onTime }) {
             >
               <span className="pick__name">{formatDay(d.date)}</span>
               <span className="meta">
-                {full
-                  ? 'Full'
-                  : `${d.openCount} ${d.openCount === 1 ? 'time' : 'times'} free`}
+                {noClinic
+                  ? 'Not working'
+                  : full
+                    ? 'Fully booked'
+                    : `${d.openCount} ${d.openCount === 1 ? 'time' : 'times'} free`}
               </span>
               <span className="slots" aria-hidden="true">
                 {d.slots.map((s) => (

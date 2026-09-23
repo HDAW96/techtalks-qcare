@@ -30,6 +30,9 @@ public class Appointment {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "BOOKED";
 
+    @Column(name = "clinical_notes", length = 2000)
+    private String clinicalNotes;
+
     public Appointment() {
     }
 
@@ -41,7 +44,14 @@ public class Appointment {
         this.medicalService = medicalService;
         this.status = "BOOKED";
     }
+    public String getClinicalNotes() {
+    return clinicalNotes;
+    } 
 
+    public void setClinicalNotes(String clinicalNotes) {
+    this.clinicalNotes = clinicalNotes;
+    }
+    
     public Integer getAppointmentId() {
         return appointmentId;
     }
