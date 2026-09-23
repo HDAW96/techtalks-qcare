@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
@@ -24,6 +25,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * talked around is worse than no queue, because the people reading it on
  * their phones have no way to tell.
  */
+// This class leaves a queue open with a patient in the chair. Rebuilding the
+// context (and with it the H2 schema and seed) afterwards keeps that out of
+// whichever class runs next - QueueConcurrencyTest opens the same doctor's
+// queue and needs the chair empty. The other queue tests already do this.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest
 @AutoConfigureMockMvc
 class QueueFlowTest {
