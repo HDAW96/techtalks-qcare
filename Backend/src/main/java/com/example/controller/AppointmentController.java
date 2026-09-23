@@ -1,5 +1,5 @@
 package com.example.controller;
-
+import com.example.dto.TreatmentCompletionO;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentRescheduleDTO;
 import com.example.dto.AppointmentResponse;
@@ -86,4 +86,17 @@ public class AppointmentController {
         }
         return userId;
     }
+
+    @PostMapping("/{appointmentId}/complete")
+public AppointmentResponse complete(
+        Authentication authentication,
+        @PathVariable Integer appointmentId,
+        @RequestBody TreatmentCompletion dto) {
+
+    return bookingService.complete(
+            signedInUserId(authentication),
+            appointmentId,
+            dto.getClinicalNotes()
+    );
+}
 }
