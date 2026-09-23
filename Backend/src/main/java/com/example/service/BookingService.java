@@ -1,5 +1,7 @@
 package com.example.service;
 
+import com.example.dto.TreatmentCompletion;
+import com.example.repository.QueueTicketRepository;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentResponse;
 import com.example.dto.DayAvailabilityResponse;
@@ -39,7 +41,9 @@ public class BookingService {
     private static final DateTimeFormatter LOCAL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
+    private static final String ROLE_DOCTOR = "DOCTOR";
 
+    private final QueueTicketRepository queueTicketRepository;
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
     private final MedicalServiceRepository serviceRepository;
@@ -54,7 +58,7 @@ public class BookingService {
             DoctorAvailabilityRepository availabilityRepository,
             DoctorLeaveRepository leaveRepository,
             PatientRepository patientRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository, QueueTicketRepository queueTicketRepository) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
@@ -62,6 +66,7 @@ public class BookingService {
         this.leaveRepository = leaveRepository;
         this.patientRepository = patientRepository;
         this.userRepository = userRepository;
+         this.queueTicketRepository = queueTicketRepository;
     }
 
     @Transactional(readOnly = true)
@@ -405,4 +410,74 @@ public class BookingService {
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "NOT_A_PATIENT",
                         "Only patients can book appointments."));
     }
+
+    /**
+ * Completes one of the signed-in doctor's appointments.
+ *
+ * Only BOOKED appointments may be completed. A cancelled or already completed
+ * appointment is never changed. If the appointment has a queue ticket in the
+ * doctor's chair, that ticket is marked DONE so the chair becomes available.
+ */
+@Transactional
+public AppointmentResponse complete(
+        Integer userId,
+        Integer appointmentId,
+        CompleteAppointmentDTO request) {
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Please sign in again."));
+
+    if (!ROLE_DOCTOR.equals(user.getRole())) {
+        throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "NOT_A_DOCTOR",
+                "Only doctors can complete appointments.");
+    }
+
+    Doctor doctor = doctorRepository.findByUser(user)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "NOT_A_DOCTOR",
+                    "Only doctors can complete appointments."));
+
+    Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "APPOINTMENT_NOT_FOUND",
+                    "That appointment was not found."));
+
+    if (!appointment.getDoctor().getDoctorId().equals(doctor.getDoctorId())) {
+        throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "NOT_YOUR_APPOINTMENT",
+                "You can only complete your own appointments.");
+    }
+
+    if (!"BOOKED".equals(appointment.getStatus())) {
+        throw new ApiException(
+                HttpStatus.CONFLICT,
+                "NOT_COMPLETABLE",
+                "Only a booked appointment can be completed.");
+    }
+
+    String notes = request == null ? null : request.getNotes();
+    appointment.setClinicalNotes(notes == null ? null : notes.trim());
+    appointment.setStatus("COMPLETED");
+    appointmentRepository.save(appointment);
+
+    // A queue ticket is optional because booked appointments may not have
+    // joined the walk-in queue.
+    queueTicketRepository.findByAppointment(appointment).ifPresent(ticket -> {
+        if ("IN_CHAIR".equals(ticket.getStatus())) {
+            ticket.setStatus("DONE");
+            ticket.setStartedAt(null);
+            queueTicketRepository.save(ticket);
+        }
+    });
+
+    return AppointmentResponse.of(appointment);
+}
 }
