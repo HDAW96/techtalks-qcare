@@ -1,5 +1,5 @@
 package com.example.controller;
-import com.example.dto.TreatmentCompletionO;
+import com.example.dto.TreatmentCompletion;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentRescheduleDTO;
 import com.example.dto.AppointmentResponse;
@@ -96,7 +96,7 @@ public AppointmentResponse complete(
     return bookingService.complete(
             signedInUserId(authentication),
             appointmentId,
-            dto.getClinicalNotes()
+            dto.getClinicalNotes()            
     );
 }
 }
