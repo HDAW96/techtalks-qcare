@@ -44,6 +44,26 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
      */
     boolean existsByQueueAndPatientAndStatusIn(Queue queue, Patient patient, List<String> statuses);
 
+    /**
+     * The tickets in one queue with a given status, patient and treatment
+     * fetched. Used for the one IN_CHAIR ticket on a doctor's schedule.
+     *
+     * A List, not an Optional, for the same reason as the method below: the
+     * one-chair rule is enforced in QueueService, and if bad data ever broke
+     * it this should show the wrong person rather than crash the doctor's
+     * whole screen with "more than one result".
+     */
+    @Query("""
+            select t from QueueTicket t
+            join fetch t.patient
+            join fetch t.medicalService
+            where t.queue = :queue
+              and t.status = :status
+            order by t.startedAt, t.ticketId
+            """)
+    List<QueueTicket> findByQueueAndStatusFetched(@Param("queue") Queue queue,
+            @Param("status") String status);
+
     /** How a patient without an account finds their own ticket again. */
     Optional<QueueTicket> findByAccessCode(String accessCode);
 

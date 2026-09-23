@@ -76,4 +76,28 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             """)
     List<Appointment> findAllBetween(@Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    /**
+     * One doctor's whole day, earliest first, whatever the status.
+     *
+     * Cancelled and completed visits are included on purpose: the doctor's
+     * own schedule should show that a slot freed up or is already finished,
+     * not silently drop it. The caller decides what to grey out.
+     *
+     * The patient and treatment are fetched with it because every row shows
+     * both, and the schedule carries the patient id so the history panel can
+     * be opened from a row.
+     */
+    @Query("""
+            select a from Appointment a
+            join fetch a.patient
+            join fetch a.medicalService
+            where a.doctor = :doctor
+              and a.appointmentDatetime >= :from
+              and a.appointmentDatetime < :to
+            order by a.appointmentDatetime
+            """)
+    List<Appointment> findForDoctorBetween(@Param("doctor") Doctor doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }
