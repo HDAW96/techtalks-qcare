@@ -48,6 +48,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Signing in and registering cannot require being signed in.
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        // Patients' treatment histories live under /api/doctors
+                        // too, so they must be locked down before the public
+                        // doctor list below - the first rule that matches wins.
+                        .requestMatchers("/api/doctors/patients/**").hasRole("DOCTOR")
                         // Anyone may see which doctors and services exist -
                         // the booking screen shows these before sign-in.
                         .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/services/**").permitAll()

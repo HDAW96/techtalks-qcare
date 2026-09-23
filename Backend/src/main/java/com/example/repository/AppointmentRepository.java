@@ -28,6 +28,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findForPatient(@Param("patient") Patient patient);
 
     /**
+     * A patient's finished treatments, most recent first, for the doctor's
+     * history view. Booked, cancelled and missed visits are left out: nothing
+     * was done at them.
+     */
+    @Query("""
+            select a from Appointment a
+            join fetch a.doctor d
+            join fetch d.user
+            join fetch a.medicalService
+            where a.patient = :patient
+              and a.status = 'COMPLETED'
+            order by a.appointmentDatetime desc
+            """)
+    List<Appointment> findCompletedForPatient(@Param("patient") Patient patient);
+
+    /**
      * What is already taken for one doctor between two moments. Used to work
      * out which start times are still free.
      */
