@@ -1,0 +1,399 @@
+/* The doctor's sheet. Everything else comes from record.css — .sheet, .now,
+   .qrow, .mark, .legend, .meta, .btn — used as they are. Vite puts all CSS in
+   one file, so every rule here is scoped under .dr and cannot restyle other
+   screens. */
+
+.dr {
+  padding-block: var(--s7) var(--s9);
+}
+
+/* ---------- title band ---------- */
+
+.dr-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s4) var(--s5);
+  flex-wrap: wrap;
+}
+
+.dr-title__pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0;
+}
+
+/* One slow breath on the teal dot says the sheet is live without asking for
+   attention. Reduced motion stops it (index.css). */
+.dr-pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--live-bright);
+  box-shadow: 0 0 0 0 rgba(18, 165, 165, 0.45);
+  animation: dr-breathe 2.4s var(--rise-ease) infinite;
+}
+
+@keyframes dr-breathe {
+  0% { box-shadow: 0 0 0 0 rgba(18, 165, 165, 0.45); }
+  70% { box-shadow: 0 0 0 7px rgba(18, 165, 165, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(18, 165, 165, 0); }
+}
+
+.dr-stale {
+  color: var(--wait);
+}
+
+/* Section headings sit in the sheet head at the same size as every other
+   screen's head, not at the browser's default h2. */
+.dr .sheet__head h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* ---------- arrival ---------- */
+
+/* The team's entrance, staged: the chair first, then what waits, then the day. */
+.dr > .title-band,
+.dr-top > *,
+.dr-day {
+  animation: rise 520ms var(--rise-ease) both;
+}
+.dr-top > *:nth-child(2) { animation-delay: 90ms; }
+.dr-day { animation-delay: 180ms; }
+
+/* ---------- top row ---------- */
+
+.dr-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--s5);
+  align-items: stretch;
+  margin-bottom: var(--s5);
+}
+
+@media (max-width: 860px) {
+  .dr-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- in the chair ---------- */
+
+.dr-chair {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The one sheet on the page with a live edge: a teal rule along its top,
+   the colour the legend gives to "in the chair". */
+.dr-chair:not(.dr-chair--empty) {
+  box-shadow: inset 0 3px 0 var(--live), var(--lift);
+}
+
+.dr-chair__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: center;
+  padding: var(--s6) var(--s5) var(--s6);
+}
+
+@media (max-width: 560px) {
+  .dr-chair__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s4);
+    padding-block: var(--s5);
+  }
+}
+
+.dr-chair__who {
+  display: grid;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.dr-chair__name {
+  margin: 0;
+  font-size: clamp(1.375rem, 1.1rem + 1vw, 1.875rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+.dr-chair__line {
+  margin: 0;
+  color: var(--ink-soft);
+  max-width: 42ch;
+}
+
+.dr-chair .dr-chair__void {
+  color: var(--rule);
+  min-width: 2ch;
+  text-align: center;
+}
+
+.dr-chair--empty .dr-chair__name {
+  font-size: 1.25rem;
+  color: var(--ink-soft);
+}
+
+.dr-chair__acts {
+  margin-top: var(--s3);
+}
+
+/* Time in the chair against the minutes the treatment was booked for. */
+.dr-time {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  max-width: 360px;
+}
+
+.dr-time__line {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.dr-time__line strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Overrun is written as words; it is information, not an alarm. */
+.dr-time__over {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dr-time__track {
+  height: 3px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.dr-time__track > span {
+  display: block;
+  height: 100%;
+  background: var(--live);
+  transform-origin: left center;
+  transition: transform 600ms var(--rise-ease);
+}
+
+.dr-time__track--over > span {
+  background: var(--ink);
+}
+
+/* ---------- waiting ---------- */
+
+.dr-wait__note {
+  margin: 0;
+  padding: var(--s5);
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+.dr-wait__board {
+  margin: 0;
+  padding: var(--s2) var(--s5) var(--s4);
+  list-style: none;
+}
+
+.dr-wait__board .qrow:last-child {
+  border-bottom: 0;
+}
+
+.dr-wait__board .qrow__name {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ---------- the day ---------- */
+
+.dr-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1.4fr) minmax(0, 1fr) 11rem auto;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--rule);
+  transition: background-color 120ms ease-out;
+}
+
+.dr-row:last-child {
+  border-bottom: 0;
+}
+
+.dr-row:hover {
+  background: var(--done-wash);
+}
+
+.dr-row__time {
+  display: grid;
+  gap: 2px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.dr-row__next {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.dr-row__who {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dr-row__name {
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.dr-row__what {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.dr-row__min {
+  color: var(--ink-soft);
+}
+
+.dr-row__act {
+  justify-self: end;
+}
+
+.dr-row__mark .mark {
+  white-space: nowrap;
+}
+
+/* One history button per row would be a column of identical pills, so at
+   rest it is just its words; the outline arrives with the row's hover or
+   the button's own focus. */
+.dr-row .dr-btn-sm {
+  padding: 6px 14px;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  border-color: transparent;
+  color: var(--ink-soft);
+}
+
+.dr-row:hover .dr-btn-sm:not([disabled]),
+.dr-row .dr-btn-sm:focus-visible {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+  background: var(--sheet);
+}
+
+/* The next booked visit carries the weight; the rest of the day recedes. */
+.dr-row--next .dr-row__time {
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.dr-row--next .dr-row__name {
+  font-size: 1.0625rem;
+}
+
+.dr-row--live {
+  background: var(--live-wash);
+}
+
+.dr-row--live:hover {
+  background: var(--live-wash);
+}
+
+.dr-row--live .dr-row__time {
+  color: var(--live);
+}
+
+.dr-row--closed .dr-row__time,
+.dr-row--closed .dr-row__name,
+.dr-row--closed .dr-row__what {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.dr-row--cancelled .dr-row__name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--ink-faint);
+}
+
+/* The now-line: a teal rule across the list at the current time — the only
+   place the day list uses the "now" colour besides the chair's own row. */
+.dr-now {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding: var(--s1) var(--s5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.dr-now__time {
+  padding: 2px 8px;
+  background: var(--live);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.dr-now__rule {
+  height: 2px;
+  background: var(--live);
+}
+
+/* Phones: time and name on one line, treatment and mark beneath, the
+   history button at the row's end. */
+@media (max-width: 760px) {
+  .dr-row {
+    grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      'time who who'
+      'time what what'
+      'time mark act';
+    row-gap: var(--s1);
+    align-items: start;
+    padding-inline: var(--s4);
+  }
+  .dr-row__time { grid-area: time; }
+  .dr-row__who { grid-area: who; }
+  .dr-row__what { grid-area: what; }
+  .dr-row__mark { grid-area: mark; align-self: center; }
+  .dr-row__act { grid-area: act; align-self: center; }
+
+  /* The day's summary drops under its heading instead of wrapping beside it. */
+  .dr-day .sheet__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s1);
+  }
+  .dr-day .sheet__head .meta--right {
+    text-align: left;
+  }
+
+  .dr-now {
+    padding-inline: var(--s4);
+  }
+}

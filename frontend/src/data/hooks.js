@@ -255,34 +255,14 @@ export function useDayAppointments(date) {
 
    Doctor-only. A patient or receptionist reaching this gets 403 from the
    server, which is surfaced as `error` rather than an empty schedule, so the
-   screen says something went wrong instead of quietly showing no work. */
+   screen says something went wrong instead of quietly showing no work.
+
+   Polled like the queue screens: the desk calls the next patient in from
+   another room, and the doctor should see who is coming without reloading.
+   A failed refresh keeps the last schedule on screen with `error` beside it. */
 export function useDoctorSchedule() {
-  const [schedule, setSchedule] = useState(null)
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [reloads, setReloads] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    apiGet('/doctors/me/schedule')
-      .then((data) => {
-        if (cancelled) return
-        setSchedule(data)
-        setError(null)
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [reloads])
-
-  const reload = useCallback(() => setReloads((n) => n + 1), [])
-  return { schedule, error, loading, reload }
+  const { data, error, loading, reload } = usePolled('/doctors/me/schedule')
+  return { schedule: data, error, loading, reload }
 }
 
 /* One patient's finished treatments, newest first, for the doctor.
