@@ -87,13 +87,13 @@ public class AppointmentController {
         }
         return userId;
     }
-    @PostMapping("/{appointmentId}/complete")
-    public AppointmentResponse complete(
+   @PostMapping("/{appointmentId}/complete")
+   public AppointmentResponse complete(
         Authentication authentication,
         @PathVariable Integer appointmentId,
         @RequestBody TreatmentCompletion request) {
 
-    return BookingService.complete(
+    return bookingService.complete(
             signedInUserId(authentication),
             appointmentId,
             request
