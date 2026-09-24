@@ -93,7 +93,7 @@ public class AppointmentController {
         @PathVariable Integer appointmentId,
         @RequestBody TreatmentCompletion request) {
 
-    return bookingService.complete(
+    return BookingService.complete(
             signedInUserId(authentication),
             appointmentId,
             request
