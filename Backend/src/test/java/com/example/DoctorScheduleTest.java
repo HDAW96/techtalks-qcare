@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +41,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * that one in SecurityConfig. A test that only checked the happy path would
  * pass just as well with every patient's name exposed to the internet.
  */
+// This class opens a queue and puts a patient in the chair to test
+// nowServing. A fresh context afterwards (and with it a fresh create-drop
+// schema and seed) keeps that out of whichever class runs next - the other
+// queue tests do the same, and PatientQueueTest asserts on how many queues
+// are open, so a leaked one fails it.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest
 @AutoConfigureMockMvc
 class DoctorScheduleTest {
@@ -62,6 +69,8 @@ class DoctorScheduleTest {
     private QueueRepository queueRepository;
     @Autowired
     private QueueTicketRepository ticketRepository;
+    @Autowired
+    private com.example.service.QueueService queueService;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -70,7 +79,12 @@ class DoctorScheduleTest {
 
     @BeforeEach
     void seedIsPresent() {
-        doctor = doctorRepository.findAll().get(0);
+        // Deliberately not the first doctor. Ticket labels are prefixed from
+        // the doctor's first name (Rania -> R, Karim -> K), and an earlier
+        // version of this DTO hardcoded "R-": using Dr Rania here let that
+        // bug pass, and the same ticket then read K-1 to the patient and R-1
+        // to the doctor.
+        doctor = doctorRepository.findAll().get(1);
         service = serviceRepository.findAll().get(0);
     }
 
@@ -128,7 +142,10 @@ class DoctorScheduleTest {
 
         JsonNode now = body.path("nowServing");
         assertThat(now.isNull()).isFalse();
-        assertThat(now.path("ticket").asText()).isEqualTo("R-7");
+        // The label the patient and the desk see for this doctor, not a
+        // fixed letter: prefixed from the doctor's first name.
+        assertThat(now.path("ticket").asText())
+                .isEqualTo(queueService.ticketPrefixFor(doctor) + "-7");
         assertThat(now.path("patientId").asInt()).isEqualTo(walkIn.getPatientId());
         assertThat(now.path("patientName").asText()).isEqualTo("Omar Saad");
         assertThat(now.path("startedAt").isNull()).isFalse();
@@ -137,7 +154,7 @@ class DoctorScheduleTest {
     @Test
     void anEmptyChairIsNullRatherThanAnError() throws Exception {
         // This doctor has no queue open at all today.
-        Doctor other = doctorRepository.findAll().get(1);
+        Doctor other = doctorRepository.findAll().get(0);
         String token = signIn(other.getUser().getPhoneNumber(), other.getUser().getFullName(),
                 SEED_PASSWORD);
 

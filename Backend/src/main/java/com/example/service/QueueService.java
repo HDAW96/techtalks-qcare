@@ -575,6 +575,16 @@ public class QueueService {
      * when two doctors' first names start the same way, both grow another
      * letter (Rania, Rami -> RA, RI). Compared case-insensitively.
      */
+    /**
+     * One doctor's label prefix. Public so the doctor's own schedule shows the
+     * same label the patient and the desk see - the prefix rule must live in
+     * exactly one place or the same ticket reads K-1 on one screen and R-1 on
+     * another.
+     */
+    public String ticketPrefixFor(Doctor doctor) {
+        return ticketPrefixes().getOrDefault(doctor.getDoctorId(), "R");
+    }
+
     private Map<Integer, String> ticketPrefixes() {
         List<Doctor> doctors = doctorRepository.findAll();
         Map<Integer, String> prefixes = new LinkedHashMap<>();

@@ -2,6 +2,7 @@ import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import PatientHistoryButton from '../components/PatientHistoryButton'
 import { useDoctorSchedule } from '../data/hooks'
+import { formatTime } from '../data/format'
 import { useAuth } from '../auth/useAuth'
 import '../styles/desk.css'
 
@@ -68,12 +69,14 @@ function DoctorPage() {
                 ) : (
                   <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {appointments.map((appt) => (
-                      // ASSUMPTION: field names (time/patientName) — confirm
-                      // against the real DoctorScheduleResponse.java DTO for
-                      // GET /api/doctors/me/schedule and adjust if different.
-                      <li key={appt.id ?? appt.ticket} className="row">
-                        <span>{appt.time}</span>
+                      /* Field names checked against DoctorScheduleDTO.Visit:
+                         appointmentId, datetime, patientId, patientName,
+                         service, minutes, status. The earlier guesses (id,
+                         time) do not exist on it and rendered blank. */
+                      <li key={appt.appointmentId} className="row">
+                        <span>{formatTime(appt.datetime)}</span>
                         <span>{appt.patientName}</span>
+                        <span className="meta">{appt.service}</span>
                       </li>
                     ))}
                   </ul>

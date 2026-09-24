@@ -31,14 +31,18 @@ public class DoctorScheduleDTO {
     public DoctorScheduleDTO() {
     }
 
+    /**
+     * @param ticketPrefix this doctor's label prefix from QueueService, so the
+     *                     doctor sees the same ticket label as the patient
+     */
     public static DoctorScheduleDTO of(Doctor doctor, LocalDate date,
-            List<Appointment> appointments, QueueTicket inChair) {
+            List<Appointment> appointments, QueueTicket inChair, String ticketPrefix) {
         DoctorScheduleDTO dto = new DoctorScheduleDTO();
         dto.doctorId = doctor.getDoctorId();
         dto.doctorName = doctor.getUser().getFullName();
         dto.date = date.toString();
         dto.appointments = appointments.stream().map(Visit::of).toList();
-        dto.nowServing = inChair == null ? null : NowServing.of(inChair);
+        dto.nowServing = inChair == null ? null : NowServing.of(inChair, ticketPrefix);
         return dto;
     }
 
@@ -128,7 +132,7 @@ public class DoctorScheduleDTO {
                 DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
         private Integer ticketId;
-        /** Already formatted for display, e.g. "R-14". */
+        /** Already formatted for display, e.g. "K-14" for Dr Karim. */
         private String ticket;
         private Integer patientId;
         private String patientName;
@@ -140,10 +144,10 @@ public class DoctorScheduleDTO {
         public NowServing() {
         }
 
-        static NowServing of(QueueTicket ticket) {
+        static NowServing of(QueueTicket ticket, String prefix) {
             NowServing now = new NowServing();
             now.ticketId = ticket.getTicketId();
-            now.ticket = "R-" + ticket.getTicketNumber();
+            now.ticket = prefix + "-" + ticket.getTicketNumber();
             now.patientId = ticket.getPatient().getPatientId();
             now.patientName = ticket.getPatient().getFullName();
             now.service = ticket.getMedicalService().getServiceName();
