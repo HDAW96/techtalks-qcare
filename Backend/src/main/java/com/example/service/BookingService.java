@@ -1,5 +1,6 @@
 package com.example.service;
 
+import com.example.dto.TreatmentCompletion;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentResponse;
 import com.example.dto.DayAvailabilityResponse;
@@ -404,5 +405,67 @@ public class BookingService {
         return patientRepository.findByUser(user)
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "NOT_A_PATIENT",
                         "Only patients can book appointments."));
+    }    
+    @Transactional
+     public AppointmentResponse complete(
+        Integer userId,
+        Integer appointmentId,
+        TreatmentCompletion request) {
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Please sign in again."));
+
+    if (!ROLE_DOCTOR.equals(user.getRole())) {
+        throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "NOT_A_DOCTOR",
+                "Only doctors can complete appointments.");
     }
+
+    Doctor doctor = doctorRepository.findByUser(user)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "NOT_A_DOCTOR",
+                    "Only doctors can complete appointments."));
+
+    Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "APPOINTMENT_NOT_FOUND",
+                    "That appointment was not found."));
+
+    if (!appointment.getDoctor().getDoctorId().equals(doctor.getDoctorId())) {
+        throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "NOT_YOUR_APPOINTMENT",
+                "You can only complete your own appointments.");
+    }
+
+    if (!"BOOKED".equals(appointment.getStatus())) {
+        throw new ApiException(
+                HttpStatus.CONFLICT,
+                "NOT_COMPLETABLE",
+                "Only a booked appointment can be completed.");
+    }
+
+   
+    appointment.setClinicalNotes(request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim());
+    appointment.setStatus("COMPLETED");
+    appointmentRepository.save(appointment);
+
+    // A queue ticket is optional because booked appointments may not have
+    // joined the walk-in queue.
+    queueTicketRepository.findByAppointment(appointment).ifPresent(ticket -> {
+        if ("IN_CHAIR".equals(ticket.getStatus())) {
+            ticket.setStatus("DONE");
+            ticket.setStartedAt(null);
+            queueTicketRepository.save(ticket);
+        }
+    });
+
+    return AppointmentResponse.of(appointment);
+}
 }
