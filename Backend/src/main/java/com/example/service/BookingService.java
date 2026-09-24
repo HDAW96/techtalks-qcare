@@ -18,6 +18,7 @@ import com.example.repository.DoctorRepository;
 import com.example.repository.MedicalServiceRepository;
 import com.example.repository.PatientRepository;
 import com.example.repository.UserRepository;
+import com.example.repository.QueueTicketRepository;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,9 @@ public class BookingService {
     private final DoctorLeaveRepository leaveRepository;
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
+    private final QueueTicketRepository queueTicketRepository;
+   
+    private static final String ROLE_DOCTOR = "DOCTOR";
 
     public BookingService(AppointmentRepository appointmentRepository,
             DoctorRepository doctorRepository,
@@ -55,7 +59,7 @@ public class BookingService {
             DoctorAvailabilityRepository availabilityRepository,
             DoctorLeaveRepository leaveRepository,
             PatientRepository patientRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository, QueueTicketRepository queueTicketRepository) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
@@ -63,6 +67,7 @@ public class BookingService {
         this.leaveRepository = leaveRepository;
         this.patientRepository = patientRepository;
         this.userRepository = userRepository;
+        this.queueTicketRepository = queueTicketRepository;
     }
 
     @Transactional(readOnly = true)
