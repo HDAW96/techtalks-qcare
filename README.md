@@ -42,7 +42,7 @@
 | | Version | Notes |
 | :--- | :--- | :--- |
 | **Java** | 25 | `java -version` to check |
-| **Node.js** | 20 or newer | `node -v` to check |
+| **Node.js** | 24 (at least 22.12) | `node -v` to check. 24 is what CI tests on; Vite 8 refuses older versions |
 | **MySQL** | 8.4 | Must be running before the backend starts |
 
 Maven is **not** needed — the project ships with the `mvnw` wrapper.
