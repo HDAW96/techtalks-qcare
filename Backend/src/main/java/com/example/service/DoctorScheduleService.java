@@ -42,19 +42,23 @@ public class DoctorScheduleService {
     private final QueueRepository queueRepository;
     private final QueueTicketRepository ticketRepository;
     private final DoctorLeaveRepository leaveRepository;
+    /** Only for the ticket label, so it matches every other screen. */
+    private final QueueService queueService;
 
     public DoctorScheduleService(UserRepository userRepository,
             DoctorRepository doctorRepository,
             AppointmentRepository appointmentRepository,
             QueueRepository queueRepository,
             QueueTicketRepository ticketRepository,
-            DoctorLeaveRepository leaveRepository) {
+            DoctorLeaveRepository leaveRepository,
+            QueueService queueService) {
         this.userRepository = userRepository;
         this.doctorRepository = doctorRepository;
         this.appointmentRepository = appointmentRepository;
         this.queueRepository = queueRepository;
         this.ticketRepository = ticketRepository;
         this.leaveRepository = leaveRepository;
+        this.queueService = queueService;
     }
 
     /**
@@ -76,7 +80,8 @@ public class DoctorScheduleService {
         var appointments = appointmentRepository.findForDoctorBetween(
                 doctor, today.atStartOfDay(), today.plusDays(1).atStartOfDay());
 
-        return DoctorScheduleDTO.of(doctor, today, appointments, inChair(doctor, today));
+        return DoctorScheduleDTO.of(doctor, today, appointments, inChair(doctor, today),
+                queueService.ticketPrefixFor(doctor));
     }
 
     /**

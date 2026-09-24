@@ -250,6 +250,41 @@ export function useDayAppointments(date) {
   }
 }
 
+/* The signed-in doctor's own day: today's appointments and whoever the desk
+   has called into their chair (GET /api/doctors/me/schedule, SCRUM-65).
+
+   Doctor-only. A patient or receptionist reaching this gets 403 from the
+   server, which is surfaced as `error` rather than an empty schedule, so the
+   screen says something went wrong instead of quietly showing no work. */
+export function useDoctorSchedule() {
+  const [schedule, setSchedule] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [reloads, setReloads] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    apiGet('/doctors/me/schedule')
+      .then((data) => {
+        if (cancelled) return
+        setSchedule(data)
+        setError(null)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [reloads])
+
+  const reload = useCallback(() => setReloads((n) => n + 1), [])
+  return { schedule, error, loading, reload }
+}
+
 /* One patient's finished treatments, newest first, for the doctor.
    Real data: GET /api/doctors/patients/{id}/history, doctors only (anyone
    else gets 403, which `error` carries). Asked once, not polled: a history
