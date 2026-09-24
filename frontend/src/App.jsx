@@ -1,17 +1,18 @@
-import { Routes, Route } from 'react-router-dom'
-import GuestHomePage from './pages/GuestHomePage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import PatientDashboardPage from './pages/PatientDashboardPage'
-import ReceptionPage from './pages/ReceptionPage'
-import ChangePasswordPage from './pages/ChangePasswordPage'
-import JoinPage from './pages/JoinPage'
-import TicketPage from './pages/TicketPage'
-import NotFoundPage from './pages/NotFoundPage'
-import RequireAuth from './auth/RequireAuth'
-import RedirectIfSignedIn from './auth/RedirectIfSignedIn'
-import { ROUTE_ROLES } from './constants'
-import './App.css'
+import { Routes, Route } from "react-router-dom";
+import GuestHomePage from "./pages/GuestHomePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import PatientDashboardPage from "./pages/PatientDashboardPage";
+import ReceptionPage from "./pages/ReceptionPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
+import JoinPage from "./pages/JoinPage";
+import TicketPage from "./pages/TicketPage";
+import DoctorPage from "./pages/DoctorPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import RequireAuth from "./auth/RequireAuth";
+import RedirectIfSignedIn from "./auth/RedirectIfSignedIn";
+import { ROUTE_ROLES } from "./constants";
+import "./App.css";
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
       <Route
         path="/dashboard"
         element={
-          <RequireAuth roles={ROUTE_ROLES['/dashboard']}>
+          <RequireAuth roles={ROUTE_ROLES["/dashboard"]}>
             <PatientDashboardPage />
           </RequireAuth>
         }
@@ -46,11 +47,25 @@ function App() {
       <Route
         path="/reception"
         element={
-          <RequireAuth roles={ROUTE_ROLES['/reception']}>
+          <RequireAuth roles={ROUTE_ROLES["/reception"]}>
             <ReceptionPage />
+          </RequireAuth>
+        } 
+        />
+
+       {/* Doctor Dashboard (SCRUM-66 & SCRUM-67) */}
+      <Route
+        path="/doctor"
+        element={
+          <RequireAuth roles={ROUTE_ROLES['/doctor']}>
+            <DoctorPage />
           </RequireAuth>
         }
       />
+
+
+     
+
       {/* Public: where the clinic QR leads, and a patient's own ticket. Joining
           works with or without an account. */}
       <Route path="/join" element={<JoinPage />} />
@@ -66,7 +81,8 @@ function App() {
       />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;
+  
