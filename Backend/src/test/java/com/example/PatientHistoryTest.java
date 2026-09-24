@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,6 +40,7 @@ class PatientHistoryTest {
     private static final String NAME = "History Patient";
     private static final String PASSWORD = "History-password1";
     private static final String SEED_PASSWORD = "changeme123";
+    private static final String NOTES = "Filling on lower left molar; review in 6 months.";
 
     @Autowired
     private MockMvc mvc;
@@ -70,10 +72,10 @@ class PatientHistoryTest {
         // finished visits are written straight to the database.
         Doctor doctor = doctorRepository.findAll().get(0);
         List<MedicalService> services = serviceRepository.findAll();
-        save(patient, doctor, services.get(0), LocalDateTime.of(2026, 3, 2, 9, 0), "COMPLETED");
-        save(patient, doctor, services.get(1), LocalDateTime.of(2026, 6, 1, 10, 0), "COMPLETED");
-        save(patient, doctor, services.get(0), LocalDateTime.of(2026, 5, 4, 11, 0), "CANCELLED");
-        save(patient, doctor, services.get(0), LocalDateTime.of(2027, 1, 4, 9, 0), "BOOKED");
+        save(patient, doctor, services.get(0), LocalDateTime.of(2026, 3, 2, 9, 0), "COMPLETED", null);
+        save(patient, doctor, services.get(1), LocalDateTime.of(2026, 6, 1, 10, 0), "COMPLETED", NOTES);
+        save(patient, doctor, services.get(0), LocalDateTime.of(2026, 5, 4, 11, 0), "CANCELLED", null);
+        save(patient, doctor, services.get(0), LocalDateTime.of(2027, 1, 4, 9, 0), "BOOKED", null);
 
         String url = "/api/doctors/patients/" + patient.getPatientId() + "/history";
         String doctorToken = token("03400001", "Dr. Rania Haddad", SEED_PASSWORD);
@@ -85,7 +87,9 @@ class PatientHistoryTest {
                 .andExpect(jsonPath("$.visits[0].datetime").value("2026-06-01T10:00"))
                 .andExpect(jsonPath("$.visits[0].service").value(services.get(1).getServiceName()))
                 .andExpect(jsonPath("$.visits[0].doctor").value(doctor.getUser().getFullName()))
-                .andExpect(jsonPath("$.visits[1].datetime").value("2026-03-02T09:00"));
+                .andExpect(jsonPath("$.visits[0].notes").value(NOTES))
+                .andExpect(jsonPath("$.visits[1].datetime").value("2026-03-02T09:00"))
+                .andExpect(jsonPath("$.visits[1].notes").doesNotExist());
 
         mvc.perform(get("/api/doctors/patients/999999/history")
                         .header("Authorization", "Bearer " + doctorToken))
@@ -93,8 +97,16 @@ class PatientHistoryTest {
                 .andExpect(jsonPath("$.error").value("PATIENT_NOT_FOUND"));
 
         // The patient themselves and the front desk are both refused.
-        mvc.perform(get(url).header("Authorization", "Bearer " + token(PHONE, NAME, PASSWORD)))
+        String patientToken = token(PHONE, NAME, PASSWORD);
+        mvc.perform(get(url).header("Authorization", "Bearer " + patientToken))
                 .andExpect(status().isForbidden());
+        // Nor do the notes reach the patient through their own appointment
+        // list: the visit is there, the doctor's notes are not.
+        String ownList = mvc.perform(get("/api/appointments/me")
+                        .header("Authorization", "Bearer " + patientToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(ownList).contains("2026-06-01").doesNotContain(NOTES);
         mvc.perform(get(url).header("Authorization",
                         "Bearer " + token("03400009", "Reception Desk One", SEED_PASSWORD)))
                 .andExpect(status().isForbidden());
@@ -103,9 +115,10 @@ class PatientHistoryTest {
     }
 
     private void save(Patient patient, Doctor doctor, MedicalService service,
-            LocalDateTime when, String status) {
+            LocalDateTime when, String status, String notes) {
         Appointment appointment = new Appointment(patient, doctor, when, service);
         appointment.setStatus(status);
+        appointment.setClinicalNotes(notes);
         appointmentRepository.save(appointment);
     }
 

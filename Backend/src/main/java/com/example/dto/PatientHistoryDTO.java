@@ -59,10 +59,10 @@ public class PatientHistoryDTO {
             visit.datetime = appointment.getAppointmentDatetime().format(LOCAL);
             visit.service = appointment.getMedicalService().getServiceName();
             visit.doctor = appointment.getDoctor().getUser().getFullName();
-            // Always null for now: the notes column arrives with SCRUM-74
-            // (treatment completion). The field is here so the frontend can
-            // already show it.
-            visit.notes = null;
+            // The doctor's notes from finishing the visit (SCRUM-74). Null
+            // when none were written. Doctors only: AppointmentResponse, which
+            // the patient's own screens read, deliberately leaves them out.
+            visit.notes = appointment.getClinicalNotes();
             return visit;
         }
 
