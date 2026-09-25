@@ -142,8 +142,22 @@
   color: var(--ink-soft);
 }
 
+/* A wrapping row, so the buttons keep a gap between them and drop to the
+   next line on a narrow card instead of touching. The rules below for
+   .dr-complete (full-width row) and .dr-chair__walkin (align-self) rely on
+   this being a flex container. */
 .dr-chair__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
   margin-top: var(--s3);
+}
+
+/* Two classes, so this beats .btn in record.css, which loads later. Slimmer
+   than the page-wide button so two fit side by side in the card. */
+.dr-chair__acts .btn {
+  padding: var(--s2) var(--s4);
 }
 
 /* Time in the chair against the minutes the treatment was booked for. */
@@ -403,7 +417,7 @@
 /* The notes box takes the whole width of the chair card once it opens: it is
    written in, not glanced at, so it gets room rather than sitting beside the
    buttons. */
-.dr-complete { flex: 1 1 100%; margin-top: var(--s3); }
+.dr-complete { flex: 1 1 100%; }
 
 .dr-complete__notes {
   width: 100%;
