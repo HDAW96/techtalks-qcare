@@ -44,6 +44,8 @@
 .sheet {
   background: var(--sheet);
   box-shadow: var(--lift);
+  margin-bottom: 50px;
+  border-radius: 25px;
 }
 
 .sheet__head {
@@ -74,6 +76,7 @@
   text-transform: uppercase;
   color: var(--ink-soft);
   line-height: 1.5;
+  margin-top: 20px;
 }
 
 .meta--right {

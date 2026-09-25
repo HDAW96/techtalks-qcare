@@ -7,13 +7,14 @@
 
 /* minmax(0, …) lets a column shrink below its widest child, so the table
    scrolls inside its box instead of stretching the whole page. */
-.desk-cols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
+.desk-cols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; margin-top:50px;}
 
 @media (max-width: 900px) {
   .desk-cols { grid-template-columns: minmax(0, 1fr); }
   /* The queue is what the desk works in all day, so it comes first;
      the doctor list and QR follow. */
   .desk-cols__queue { order: -1; }
+  /* .desk-qr .qr {height: 50%; width: 50%; margin-bottom: 8px;} */
 }
 
 .doc { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
@@ -70,7 +71,7 @@
 .desk-head__tag { white-space: nowrap; }
 
 .desk-qr { text-align: center; }
-.desk-qr .qr { width: 180px; height: 180px; margin-bottom: 12px; }
+.desk-qr .qr { width: 100%; height: 100%; margin-bottom: 12px; }
 
 /* The walk-in form opens where the footer buttons were, so the desk's eye
    does not have to travel and nothing on the board is covered. */

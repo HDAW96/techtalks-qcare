@@ -19,7 +19,7 @@ function SiteHeader() {
   // A doctor has no screen at all yet, so they get no link rather than one
   // that leads somewhere that refuses them.
   const home = user ? (HOME_ROUTE_FOR_ROLE[user.role] ?? '/') : '/'
-  const homeLabel = { [ROLE.PATIENT]: 'My record', [ROLE.RECEPTIONIST]: 'Front desk' }[user?.role]
+  const homeLabel = { [ROLE.PATIENT]: 'My Record', [ROLE.RECEPTIONIST]: 'Front Desk' }[user?.role]
 
   function handleSignOut() {
     close()
@@ -58,7 +58,7 @@ function SiteHeader() {
               always lands on the home page first; GuestHomePage scrolls to
               the section once it mounts. */}
           <Link to="/#how" onClick={close}>
-            How it works
+            How It Works
           </Link>
 
           {user ? (
@@ -69,13 +69,13 @@ function SiteHeader() {
                 </NavLink>
               )}
               <button type="button" className="btn btn--quiet" onClick={handleSignOut}>
-                Sign out
+                Sign Out
               </button>
             </>
           ) : (
             <>
               <NavLink to="/login" onClick={close} style={untilKnown}>
-                Sign in
+                Sign In
               </NavLink>
               <Link
                 to="/register"
@@ -83,7 +83,7 @@ function SiteHeader() {
                 onClick={close}
                 style={untilKnown}
               >
-                Create a record
+                Create a Record
               </Link>
             </>
           )}

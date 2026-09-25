@@ -66,19 +66,19 @@ function GuestHomePage() {
                 {user ? (
                   <>
                     <Link to="/dashboard" className="btn btn--live">
-                      Go to my record
+                      Go to my Record
                     </Link>
                     <Link to="/dashboard?section=book" className="btn btn--quiet">
-                      Book an appointment
+                      Book an Appointment
                     </Link>
                   </>
                 ) : (
                   <>
                     <Link to="/register" className="btn btn--live" style={untilKnown}>
-                      Create a record
+                      Create a Record
                     </Link>
                     <Link to="/login" className="btn btn--quiet" style={untilKnown}>
-                      Sign in
+                      Sign In
                     </Link>
                   </>
                 )}
@@ -95,7 +95,7 @@ function GuestHomePage() {
                     </div>
                     <div className="meta meta--right">
                       <p>{clinic.name}</p>
-                      <p>Live · updates every 15 seconds</p>
+                      <p>Live · Updates every 15 seconds</p>
                     </div>
                   </div>
                   <div className="empty">
