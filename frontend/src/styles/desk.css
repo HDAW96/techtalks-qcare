@@ -7,14 +7,13 @@
 
 /* minmax(0, …) lets a column shrink below its widest child, so the table
    scrolls inside its box instead of stretching the whole page. */
-.desk-cols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; margin-top:50px;}
+.desk-cols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 50px; }
 
 @media (max-width: 900px) {
   .desk-cols { grid-template-columns: minmax(0, 1fr); }
   /* The queue is what the desk works in all day, so it comes first;
      the doctor list and QR follow. */
   .desk-cols__queue { order: -1; }
-  /* .desk-qr .qr {height: 50%; width: 50%; margin-bottom: 8px;} */
 }
 
 .doc { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
@@ -71,7 +70,11 @@
 .desk-head__tag { white-space: nowrap; }
 
 .desk-qr { text-align: center; }
-.desk-qr .qr { width: 100%; height: 100%; margin-bottom: 12px; }
+/* Fills the card on a desktop, but capped: under 900px the desk collapses to
+   one column, and an uncapped QR measured 690px square at 800px wide -
+   most of the screen for a code that only has to be scannable at arm's
+   length. height:auto keeps it square through its own viewBox. */
+.desk-qr .qr { width: 100%; max-width: 280px; height: auto; margin-bottom: 12px; }
 
 /* The walk-in form opens where the footer buttons were, so the desk's eye
    does not have to travel and nothing on the board is covered. */
@@ -85,3 +88,12 @@
 
 /* The day buttons drop below the heading on a phone instead of pushing the page wide. */
 .desk-appts__head { flex-wrap: wrap; row-gap: 12px; }
+
+/* ---------- desk spacing ----------
+   .sheet and .meta are shared by every page - the footer, the patient
+   dashboard, the doctor page - so the extra room the desk wanted is scoped
+   here rather than set on the shared rule. Unscoped, the 50px landed on top
+   of the 24px .stack gap on the patient dashboard, and pushed the footer's
+   address and opening hours away from the clinic name they belong to. */
+.desk-cols .sheet { margin-bottom: 50px; }
+.desk-cols .sheet__head .meta { margin-top: 20px; }
