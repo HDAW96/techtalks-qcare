@@ -3,7 +3,7 @@ import SiteHeader from '../components/SiteHeader'
 import SiteFooter from '../components/SiteFooter'
 import Mark from '../components/Mark'
 import PatientHistoryButton from '../components/PatientHistoryButton'
-import { useDoctorSchedule, usePublicBoard, waitLabel } from '../data/hooks'
+import { completeVisit, useDoctorSchedule, usePublicBoard, waitLabel } from '../data/hooks'
 import { formatDay, formatRecordNumber, formatTime } from '../data/format'
 import { useAuth } from '../auth/useAuth'
 import { APPOINTMENT_STATUS, STATUS_MARK, TICKET_STATUS } from '../constants'
@@ -58,6 +58,17 @@ function DoctorPage() {
 
   const name = schedule?.doctorName ?? user?.fullName ?? 'Doctor'
   const chair = schedule?.nowServing ?? null
+
+  /* Which of today's appointments the person in the chair is here for.
+     Matched on the patient, because a queue ticket carries no appointment -
+     nothing links the two yet (see SCRUM-80). A walk-in has no appointment at
+     all, and then there is nothing to complete: the desk closes their ticket. */
+  const chairAppointment =
+    chair == null
+      ? null
+      : (schedule?.appointments ?? []).find(
+          (a) => a.patientId === chair.patientId && a.status === APPOINTMENT_STATUS.BOOKED,
+        ) ?? null
   const appointments = schedule?.appointments ?? []
   const queue = schedule ? queues.find((q) => q.doctorId === schedule.doctorId) ?? null : null
 
@@ -105,7 +116,7 @@ function DoctorPage() {
         {schedule && (
           <>
             <div className="dr-top">
-              <Chair chair={chair} now={now} />
+              <Chair chair={chair} now={now} appointment={chairAppointment} onDone={reload} />
               <Waiting queue={queue} />
             </div>
             <DayList appointments={appointments} chair={chair} now={now} date={schedule.date} />
@@ -120,7 +131,7 @@ function DoctorPage() {
 
 /* ---------- in the chair ---------- */
 
-function Chair({ chair, now }) {
+function Chair({ chair, now, appointment, onDone }) {
   if (!chair) {
     return (
       <section className="sheet dr-chair dr-chair--empty" aria-labelledby="dr-chair-title">
@@ -193,10 +204,102 @@ function Chair({ chair, now }) {
               patientName={chair.patientName ?? ''}
               className="btn btn--live"
             />
+            <CompleteVisit appointment={appointment} onDone={onDone} />
           </div>
         </div>
       </div>
     </section>
+  )
+}
+
+/* ---------- finishing the visit ---------- */
+
+/* "Complete visit", and the notes the doctor writes as they finish.
+
+   Two presses: the first opens the notes box, the second saves. Nothing is
+   filled in for them and notes are optional - a doctor standing over a
+   patient should not have to type to close a visit.
+
+   Only shown when the person in the chair has a booked appointment today,
+   because that appointment is what is being completed. A walk-in has none,
+   and the desk closes their ticket instead; saying so is more use than a
+   button that cannot work. */
+function CompleteVisit({ appointment, onDone }) {
+  const [open, setOpen] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  if (!appointment) {
+    return (
+      <p className="meta dr-chair__walkin">
+        Walk-in — reception marks them done when they leave the chair.
+      </p>
+    )
+  }
+
+  async function save() {
+    if (saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      await completeVisit(appointment.appointmentId, notes)
+      setOpen(false)
+      setNotes('')
+      // The chair empties because the server said so, not because this
+      // screen assumed it would.
+      onDone?.()
+    } catch (e) {
+      setError(e.message || 'Could not complete this visit. Please try again.')
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="btn" onClick={() => setOpen(true)}>
+        Complete visit
+      </button>
+    )
+  }
+
+  return (
+    <div className="dr-complete">
+      <label className="cell__label" htmlFor="dr-notes">
+        Clinical notes <span className="cell__optional">optional</span>
+      </label>
+      <textarea
+        id="dr-notes"
+        className="cell__input dr-complete__notes"
+        rows={3}
+        maxLength={2000}
+        placeholder="What was done, and anything the next visit should know."
+        value={notes}
+        disabled={saving}
+        onChange={(e) => setNotes(e.target.value)}
+      />
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="dr-complete__acts">
+        <button type="button" className="btn btn--live" disabled={saving} onClick={save}>
+          {saving ? 'Saving…' : 'Save and finish'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--quiet"
+          disabled={saving}
+          onClick={() => {
+            setError(null)
+            setOpen(false)
+          }}
+        >
+          Not yet
+        </button>
+      </div>
+    </div>
   )
 }
 
