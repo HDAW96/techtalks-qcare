@@ -10,6 +10,7 @@ import com.example.entity.Doctor;
 import com.example.entity.DoctorAvailability;
 import com.example.entity.MedicalService;
 import com.example.entity.Patient;
+import com.example.entity.QueueTicket;
 import com.example.entity.User;
 import com.example.repository.AppointmentRepository;
 import com.example.repository.DoctorAvailabilityRepository;
@@ -18,6 +19,7 @@ import com.example.repository.DoctorRepository;
 import com.example.repository.MedicalServiceRepository;
 import com.example.repository.PatientRepository;
 import com.example.repository.UserRepository;
+import com.example.repository.QueueRepository;
 import com.example.repository.QueueTicketRepository;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -50,6 +52,7 @@ public class BookingService {
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
     private final QueueTicketRepository queueTicketRepository;
+    private final QueueRepository queueRepository;
    
     private static final String ROLE_DOCTOR = "DOCTOR";
 
@@ -59,7 +62,8 @@ public class BookingService {
             DoctorAvailabilityRepository availabilityRepository,
             DoctorLeaveRepository leaveRepository,
             PatientRepository patientRepository,
-            UserRepository userRepository, QueueTicketRepository queueTicketRepository) {
+            UserRepository userRepository, QueueTicketRepository queueTicketRepository,
+            QueueRepository queueRepository) {
         this.appointmentRepository = appointmentRepository;
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
@@ -68,6 +72,7 @@ public class BookingService {
         this.patientRepository = patientRepository;
         this.userRepository = userRepository;
         this.queueTicketRepository = queueTicketRepository;
+        this.queueRepository = queueRepository;
     }
 
     @Transactional(readOnly = true)
@@ -461,16 +466,55 @@ public class BookingService {
     appointment.setStatus("COMPLETED");
     appointmentRepository.save(appointment);
 
-    // A queue ticket is optional because booked appointments may not have
-    // joined the walk-in queue.
-    queueTicketRepository.findByAppointment(appointment).ifPresent(ticket -> {
-        if ("IN_CHAIR".equals(ticket.getStatus())) {
-            ticket.setStatus("DONE");
-            ticket.setStartedAt(null);
-            queueTicketRepository.save(ticket);
-        }
-    });
+    freeTheChair(appointment, doctor);
 
     return AppointmentResponse.of(appointment);
 }
+
+    /**
+     * Marks the queue ticket this visit was being seen on as DONE, so the
+     * chair is free for the next patient.
+     *
+     * The ticket is found two ways because only one of them works today.
+     * Ideally a ticket is linked to its appointment, and the first branch
+     * uses that link - but nothing creates it yet: checking a booked patient
+     * in at the desk is not built, so every ticket in the database has a null
+     * appointment_id and the link is never there. Until it is, fall back to
+     * the fact that matters in the room: this doctor has one chair, and the
+     * person in it is this patient.
+     *
+     * Silent when there is no such ticket, which is the ordinary case for a
+     * booked patient who never joined the walk-in queue at all. Completing
+     * the visit must not fail because there was no ticket to close.
+     *
+     * startedAt is deliberately left alone. It records when the treatment
+     * began, and a finished visit is exactly when that is worth keeping.
+     */
+    private void freeTheChair(Appointment appointment, Doctor doctor) {
+        QueueTicket ticket = queueTicketRepository.findByAppointment(appointment)
+                .orElseGet(() -> chairTicketFor(appointment, doctor));
+        if (ticket == null || !QueueService.IN_CHAIR.equals(ticket.getStatus())) {
+            return;
+        }
+        ticket.setStatus(QueueService.DONE);
+        queueTicketRepository.save(ticket);
+    }
+
+    /**
+     * The ticket this doctor currently has in the chair, if it belongs to this
+     * appointment's patient. Looked up on the appointment's own day, because
+     * that is the day the visit happened.
+     */
+    private QueueTicket chairTicketFor(Appointment appointment, Doctor doctor) {
+        return queueRepository
+                .findByDoctorAndQueueDate(doctor, appointment.getAppointmentDatetime().toLocalDate())
+                .map(queue -> queueTicketRepository
+                        .findByQueueAndStatusFetched(queue, QueueService.IN_CHAIR).stream()
+                        .filter(t -> t.getPatient().getPatientId()
+                                .equals(appointment.getPatient().getPatientId()))
+                        .findFirst()
+                        .orElse(null))
+                .orElse(null);
+    }
+
 }

@@ -250,6 +250,19 @@ export function useDayAppointments(date) {
   }
 }
 
+/* Finishing a visit: marks the appointment COMPLETED, saves the doctor's
+   clinical notes, and frees the chair (SCRUM-80).
+
+   Not a hook, because it is a one-off action rather than something a screen
+   subscribes to. The caller reloads the schedule afterwards, so the chair and
+   the day list both come back from the server rather than being guessed at
+   here - the ticket only leaves the chair because the server said so. */
+export function completeVisit(appointmentId, clinicalNotes) {
+  return apiPost(`/appointments/${appointmentId}/complete`, {
+    clinicalNotes: clinicalNotes?.trim() ? clinicalNotes.trim() : null,
+  })
+}
+
 /* The signed-in doctor's own day: today's appointments and whoever the desk
    has called into their chair (GET /api/doctors/me/schedule, SCRUM-65).
 

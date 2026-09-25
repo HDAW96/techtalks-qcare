@@ -397,3 +397,27 @@
     padding-inline: var(--s4);
   }
 }
+
+/* ---------- finishing the visit (SCRUM-80) ---------- */
+
+/* The notes box takes the whole width of the chair card once it opens: it is
+   written in, not glanced at, so it gets room rather than sitting beside the
+   buttons. */
+.dr-complete { flex: 1 1 100%; margin-top: var(--s3); }
+
+.dr-complete__notes {
+  width: 100%;
+  resize: vertical;
+  min-height: 72px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 0;
+  padding: var(--s2);
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.dr-complete__acts { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+
+/* Said in place of the button, so the reason the action is missing is where
+   the action would have been. */
+.dr-chair__walkin { margin: 0; align-self: center; }
