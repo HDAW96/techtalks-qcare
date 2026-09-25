@@ -44,6 +44,7 @@
 .sheet {
   background: var(--sheet);
   box-shadow: var(--lift);
+  border-radius: 25px;
 }
 
 .sheet__head {

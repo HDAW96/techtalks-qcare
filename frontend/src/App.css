@@ -315,6 +315,7 @@
   top: 76px;
   background: var(--sheet);
   box-shadow: var(--lift);
+  border-radius: 15px;
 }
 
 .dash__who {
@@ -340,6 +341,7 @@
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--rule);
+  border-radius: 5px;
   padding: var(--s3) var(--s4);
   font-size: 0.9375rem;
   font-weight: 600;
@@ -351,6 +353,7 @@
 .dash__link:hover {
   background: var(--done-wash);
   color: var(--ink);
+  border-radius: 5px;
 }
 
 /* The open section is marked structurally, not just tinted. */
