@@ -1,10 +1,12 @@
 package com.example.service;
 
+import com.example.entity.Admin;
 import com.example.entity.Doctor;
 import com.example.entity.DoctorAvailability;
 import com.example.entity.MedicalService;
 import com.example.entity.Receptionist;
 import com.example.entity.User;
+import com.example.repository.AdminRepository;
 import com.example.repository.DoctorAvailabilityRepository;
 import com.example.repository.DoctorRepository;
 import com.example.repository.MedicalServiceRepository;
@@ -21,11 +23,11 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Puts the clinic's doctors, treatments and receptionists into an empty
+ * Puts the clinic's doctors, treatments, receptionists and admin into an empty
  * database so the app has something to show. The doctor block runs only when
  * there are no doctors yet, so it never overwrites real data. The
- * receptionists have their own check, because every existing development
- * database already has doctors and would otherwise skip them.
+ * receptionists and the admin have their own checks, because every existing
+ * development database already has doctors and would otherwise skip them.
  *
  * The doctors and services deliberately mirror the frontend's mock data, so a
  * screen looks the same before and after it is wired to the backend and any
@@ -42,6 +44,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
+    private final AdminRepository adminRepository;
     private final MedicalServiceRepository serviceRepository;
     private final DoctorAvailabilityRepository availabilityRepository;
     private final ReceptionistRepository receptionistRepository;
@@ -49,6 +52,7 @@ public class DataSeeder implements CommandLineRunner {
 
     public DataSeeder(UserRepository userRepository,
             DoctorRepository doctorRepository,
+            AdminRepository adminRepository,
             MedicalServiceRepository serviceRepository,
             DoctorAvailabilityRepository availabilityRepository,
             ReceptionistRepository receptionistRepository,
@@ -57,6 +61,7 @@ public class DataSeeder implements CommandLineRunner {
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
         this.availabilityRepository = availabilityRepository;
+        this.adminRepository = adminRepository;
         this.receptionistRepository = receptionistRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -71,6 +76,13 @@ public class DataSeeder implements CommandLineRunner {
                     new MedicalService("Filling", 40),
                     new MedicalService("Extraction", 30)));
             log.info("Seeded {} services", serviceRepository.count());
+        }
+
+        // Checked on users rather than the admin table: users is where the
+        // (phone, name) constraint lives, so this can never insert a duplicate.
+        if (!userRepository.existsByRole("ADMIN")) {
+            seedAdmin("Admin One", "03400011");
+            log.info("Seeded {} admins", adminRepository.count());
         }
 
         if (doctorRepository.count() == 0) {
@@ -122,5 +134,15 @@ public class DataSeeder implements CommandLineRunner {
         Receptionist receptionist = new Receptionist();
         receptionist.setUser(user);
         return receptionistRepository.save(receptionist);
+    }
+
+    private Admin seedAdmin(String name, String phone) {
+        User user = new User(name, phone, passwordEncoder.encode(SEED_PASSWORD), "ADMIN");
+        user.setMustChangePassword(true);
+        userRepository.save(user);
+
+        Admin admin = new Admin();
+        admin.setUser(user);
+        return adminRepository.save(admin);
     }
 }

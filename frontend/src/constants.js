@@ -22,6 +22,7 @@ export const ROLE = {
   PATIENT: 'PATIENT',
   DOCTOR: 'DOCTOR',
   RECEPTIONIST: 'RECEPTIONIST',
+  ADMIN: 'ADMIN',
 }
 /* Which screen a signed-in user lands on. One sign-in form serves everyone,
    so this is what makes it open the right thing: the role on the account
@@ -30,6 +31,7 @@ export const HOME_ROUTE_FOR_ROLE = {
   [ROLE.PATIENT]: '/dashboard',
   [ROLE.DOCTOR]: '/doctor',
   [ROLE.RECEPTIONIST]: '/reception',
+  [ROLE.ADMIN]: '/admin',
 }
 
 /* Which roles may open each gated route. RequireAuth enforces it, and the
@@ -41,6 +43,7 @@ export const ROUTE_ROLES = {
   '/dashboard': [ROLE.PATIENT],
   '/reception': [ROLE.RECEPTIONIST],
   '/doctor': [ROLE.DOCTOR],
+  '/admin': [ROLE.ADMIN],
 }
 
 /* Maps a backend status onto the four marks the UI legend defines

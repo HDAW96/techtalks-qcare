@@ -61,6 +61,9 @@ public class SecurityConfig {
                         // it is locked down here for the same reason and, like
                         // the rule above, before the public doctor list.
                         .requestMatchers("/api/doctors/me/**").hasRole("DOCTOR")
+                        // Everything under /api/admin manages staff accounts,
+                        // so only an admin may use it.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Anyone may see which doctors and services exist -
                         // the booking screen shows these before sign-in.
                         .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/services/**").permitAll()
