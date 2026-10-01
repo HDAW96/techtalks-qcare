@@ -1,0 +1,74 @@
+/* Admin screen only. Every rule starts with .admin, because Vite puts all CSS
+   in one file and nothing here may restyle another screen. */
+
+.admin {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--s5);
+  align-items: start;
+  margin-block: var(--s6) var(--s7);
+}
+
+.admin .admin__nav {
+  position: sticky;
+  top: var(--s5);
+  padding: var(--s3);
+  background: var(--sheet);
+  border-radius: 25px;
+  box-shadow: var(--lift);
+}
+
+.admin .admin__list {
+  display: grid;
+  gap: var(--s1);
+}
+
+.admin .admin__link {
+  display: block;
+  padding: var(--s3) var(--s4);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 12px;
+}
+
+.admin .admin__link:hover {
+  background: var(--done-wash);
+  color: var(--ink);
+}
+
+/* The current section is marked by a bar as well as colour, like the
+   selected doctor on the front desk. */
+.admin .admin__link.is-active {
+  background: var(--live-wash);
+  color: var(--live);
+  box-shadow: inset 3px 0 0 var(--live);
+}
+
+.admin .admin__main {
+  min-width: 0;
+}
+
+/* On a phone the sidebar becomes one row of links that scrolls on its own,
+   so the page never scrolls sideways. */
+@media (max-width: 900px) {
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin .admin__nav {
+    position: static;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin .admin__list {
+    display: flex;
+    gap: var(--s2);
+  }
+
+  .admin .admin__link {
+    white-space: nowrap;
+  }
+}
