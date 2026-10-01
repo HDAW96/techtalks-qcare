@@ -2,6 +2,7 @@ package com.example.repository;
 
 import com.example.entity.Appointment;
 import com.example.entity.Doctor;
+import com.example.entity.MedicalService;
 import com.example.entity.Patient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -100,4 +101,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findForDoctorBetween(@Param("doctor") Doctor doctor,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    /** Whether any appointment, whatever its status, uses this service. */
+    boolean existsByMedicalService(MedicalService service);
 }

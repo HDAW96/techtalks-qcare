@@ -1,6 +1,7 @@
 package com.example.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 
 /**
  * A treatment the clinic offers. The duration drives both the bookable time
@@ -19,6 +20,18 @@ public class MedicalService {
 
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
+
+    /**
+     * Deactivated services stay in old appointments and history but can't be
+     * booked.
+     *
+     * The column default matters: ddl-auto=update adds this column to tables
+     * that already hold services, and without a default MySQL would fill the
+     * existing rows with 0 - every service inactive, booking broken.
+     */
+    @Column(name = "active", nullable = false)
+    @ColumnDefault("true")
+    private Boolean active = true;
 
     public MedicalService() {
     }
@@ -50,5 +63,13 @@ public class MedicalService {
 
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
