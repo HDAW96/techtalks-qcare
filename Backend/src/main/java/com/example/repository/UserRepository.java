@@ -2,7 +2,10 @@ package com.example.repository;
 
 import com.example.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
@@ -21,4 +24,19 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * an empty database.
      */
     boolean existsByRole(String role);
+    @Query("""
+    SELECT u FROM User u
+    WHERE (:role IS NULL OR u.role = :role)
+      AND (
+          :search IS NULL
+          OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
+          OR u.phoneNumber LIKE CONCAT('%', :search, '%')
+      )
+""")
+List<User> searchUsers(
+        @Param("role") String role,
+        @Param("search") String search
+);
+
+
 }
