@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Cell from '../Cell'
 import Mark from '../Mark'
-import {
-  USE_SAMPLE_SERVICES,
-  createService,
-  deleteService,
-  listServices,
-  updateService,
-} from './servicesApi'
+import { createService, deleteService, listServices, updateService } from './servicesApi'
 
 /* Manage Services (SCRUM-90): every treatment the clinic offers, with add,
    edit and deactivate.
@@ -173,12 +167,6 @@ function ManageServices() {
           </button>
         )}
       </div>
-
-      {USE_SAMPLE_SERVICES && (
-        <p className="admin-services__sample" role="note">
-          Sample data. The services API (SCRUM-89) is not connected yet, so changes here are not saved.
-        </p>
-      )}
 
       {open?.kind === 'add' && (
         <ServiceForm

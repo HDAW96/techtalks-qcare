@@ -78,21 +78,11 @@
   flex-wrap: wrap;
 }
 
-.admin .admin-services__sample,
 .admin .admin-services__notice {
   margin: 0;
   padding: var(--s3) var(--s5);
   border-bottom: 1px solid var(--rule);
   font-size: 0.875rem;
-}
-
-/* Sample data must never be mistaken for the clinic's real list. */
-.admin .admin-services__sample {
-  background: var(--wait-wash);
-  color: var(--wait);
-}
-
-.admin .admin-services__notice {
   background: var(--live-wash);
   color: var(--live);
 }
