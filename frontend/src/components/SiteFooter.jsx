@@ -5,7 +5,7 @@ import { HOME_ROUTE_FOR_ROLE, ROLE } from '../constants'
 
 function SiteFooter() {
   const { user, loading } = useAuth()
-  const homeLabel = { [ROLE.PATIENT]: 'My record', [ROLE.RECEPTIONIST]: 'Front desk' }[user?.role]
+  const homeLabel =  { [ROLE.PATIENT]: 'My Record', [ROLE.RECEPTIONIST]: 'Front Desk', [ROLE.DOCTOR]: 'Dashboard', [ROLE.ADMIN]: 'Admin Panel' }[user?.role]
   const untilKnown = loading ? { visibility: 'hidden' } : undefined
 
   return (

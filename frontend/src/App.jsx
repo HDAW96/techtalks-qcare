@@ -8,6 +8,7 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import JoinPage from "./pages/JoinPage";
 import TicketPage from "./pages/TicketPage";
 import DoctorPage from "./pages/DoctorPage";
+import AdminPage from "./pages/AdminPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RequireAuth from "./auth/RequireAuth";
 import RedirectIfSignedIn from "./auth/RedirectIfSignedIn";
@@ -59,6 +60,16 @@ function App() {
         element={
           <RequireAuth roles={ROUTE_ROLES['/doctor']}>
             <DoctorPage />
+          </RequireAuth>
+        }
+      />
+
+            {/* Admin screen (SCRUM-83). Gated on the role: it manages accounts. */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth roles={ROUTE_ROLES["/admin"]}>
+            <AdminPage />
           </RequireAuth>
         }
       />
