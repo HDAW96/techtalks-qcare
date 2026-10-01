@@ -93,4 +93,7 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
 
     /** Whether any queue ticket, whatever its status, uses this service. */
     boolean existsByMedicalService(MedicalService service);
+
+    /** Tickets whose queue's day falls in the range, both ends included. */
+    List<QueueTicket> findByQueueQueueDateBetween(LocalDate from, LocalDate to);
 }
