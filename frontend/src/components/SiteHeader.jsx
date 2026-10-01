@@ -15,11 +15,8 @@ function SiteHeader() {
   const close = () => setOpen(false)
 
   // One header for everyone, so the link has to say where it actually goes.
-  // A receptionist has no patient record to open, and a patient has no desk.
-  // A doctor has no screen at all yet, so they get no link rather than one
-  // that leads somewhere that refuses them.
   const home = user ? (HOME_ROUTE_FOR_ROLE[user.role] ?? '/') : '/'
-  const homeLabel = { [ROLE.PATIENT]: 'My record', [ROLE.RECEPTIONIST]: 'Front desk' }[user?.role]
+  const homeLabel = { [ROLE.PATIENT]: 'My Record', [ROLE.RECEPTIONIST]: 'Front Desk', [ROLE.DOCTOR]: 'Dashboard', [ROLE.ADMIN]: 'Admin Panel' }[user?.role]
 
   function handleSignOut() {
     close()
@@ -33,6 +30,13 @@ function SiteHeader() {
     <header className="head">
       <div className="wrap head__inner">
         <Logo />
+
+        {user ?(
+             <span className="head__who">
+                Signed in as <strong>{user.fullName}</strong>
+          </span> 
+          ) : null
+            }
 
         <button
           type="button"
@@ -49,6 +53,7 @@ function SiteHeader() {
           className={`head__nav${open ? ' is-open' : ''}`}
           aria-label="Main"
         >
+      
           <NavLink to="/" end onClick={close}>
             Home
           </NavLink>
@@ -68,6 +73,7 @@ function SiteHeader() {
                   {homeLabel}
                 </NavLink>
               )}
+
               <button type="button" className="btn btn--quiet" onClick={handleSignOut}>
                 Sign out
               </button>
