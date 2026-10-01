@@ -1,6 +1,7 @@
 package com.example.repository;
 
 import com.example.entity.Appointment;
+import com.example.entity.MedicalService;
 import com.example.entity.Patient;
 import com.example.entity.Queue;
 import com.example.entity.QueueTicket;
@@ -89,4 +90,7 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
     List<QueueTicket> findActiveTicketForPatientOnDate(
             @Param("patient") Patient patient,
             @Param("queueDate") LocalDate queueDate);
+
+    /** Whether any queue ticket, whatever its status, uses this service. */
+    boolean existsByMedicalService(MedicalService service);
 }

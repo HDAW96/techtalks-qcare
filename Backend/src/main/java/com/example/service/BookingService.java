@@ -131,6 +131,7 @@ public class BookingService {
         MedicalService service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
                         "That treatment was not found."));
+        ServiceCatalogService.requireActive(service);
 
         int duration = service.getDurationMinutes();
         LocalDate today = LocalDate.now();
@@ -186,6 +187,7 @@ public class BookingService {
         MedicalService service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
                         "That treatment was not found."));
+        ServiceCatalogService.requireActive(service);
 
         LocalDateTime when = parseDatetime(request.getDatetime());
         requireBookable(doctor, service, when, null);

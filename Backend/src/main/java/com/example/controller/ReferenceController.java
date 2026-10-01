@@ -35,6 +35,9 @@ public class ReferenceController {
 
     @GetMapping("/services")
     public List<ServiceResponse> services() {
-        return serviceRepository.findAll().stream().map(ServiceResponse::of).toList();
+        // Active only: a deactivated treatment must not be offered for a new
+        // booking or walk-in, though old appointments still show it.
+        return serviceRepository.findByActiveTrueOrderByServiceNameAsc().stream()
+                .map(ServiceResponse::of).toList();
     }
 }
