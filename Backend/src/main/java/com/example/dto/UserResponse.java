@@ -17,7 +17,16 @@ public class UserResponse {
     /** True for the seeded staff accounts until they choose their own password. */
     private boolean mustChangePassword;
 
+    public UserResponse(Integer userId, String fullName, String phoneNumber, String role) {
+        this.userId = userId;
+        this.fullName = fullName;
+        this.phoneNumber = phoneNumber;
+        this.role = role; 
+
+    }
+
     public UserResponse() {
+        //TODO Auto-generated constructor stub
     }
 
     public static UserResponse of(User user, Patient patient) {
@@ -56,6 +65,5 @@ public class UserResponse {
     public boolean isMustChangePassword() {
         return mustChangePassword;
     }
-
 
 }
