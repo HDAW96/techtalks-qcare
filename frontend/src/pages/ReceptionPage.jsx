@@ -86,6 +86,7 @@ function ReceptionPage() {
 
   return (
     <div className="page">
+      <title>{`${clinic.name}'s Reception - QCare`}</title>
       <SiteHeader />
 
       <main className="wrap stack">

@@ -14,8 +14,8 @@ function AdminPage() {
 
   return (
     <div className="page">
-      <SiteHeader />
-
+      <title>{`${active.label} - Admin - QCare`}</title>
+      <SiteHeader/>
       <main className="wrap">
         <div className="admin">
           <AdminSidebar sections={ADMIN_SECTIONS} activeId={active.id} />
