@@ -72,3 +72,194 @@
     white-space: nowrap;
   }
 }
+/* ---------- Manage Services (SCRUM-90) ---------- */
+
+.admin .admin-services__head {
+  flex-wrap: wrap;
+}
+
+.admin .admin-services__sample,
+.admin .admin-services__notice {
+  margin: 0;
+  padding: var(--s3) var(--s5);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+}
+
+/* Sample data must never be mistaken for the clinic's real list. */
+.admin .admin-services__sample {
+  background: var(--wait-wash);
+  color: var(--wait);
+}
+
+.admin .admin-services__notice {
+  background: var(--live-wash);
+  color: var(--live);
+}
+
+.admin .admin-services__load-error {
+  margin: 0 0 var(--s4);
+}
+
+.admin .admin-form {
+  padding: var(--s5);
+  border-bottom: 1px solid var(--rule);
+  background: var(--done-wash);
+}
+
+.admin .admin-form__title {
+  margin-bottom: var(--s4);
+  font-size: 1rem;
+}
+
+.admin .admin-form__cells {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.admin .admin-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-top: var(--s5);
+}
+
+.admin .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin .admin-table th {
+  padding: var(--s3) var(--s5);
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.admin .admin-table td {
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.admin .admin-table__name {
+  font-weight: 600;
+}
+
+/* An inactive service stays readable, but steps back from the active ones. */
+.admin .admin-table tr.is-inactive .admin-table__name,
+.admin .admin-table tr.is-inactive td[data-label='Duration'] {
+  color: var(--ink-faint);
+}
+
+.admin .admin-table .admin-table__actions {
+  text-align: right;
+}
+
+.admin .admin-table__editing > td {
+  padding: 0;
+}
+
+.admin .admin-table__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+.admin .admin-table__confirm {
+  display: grid;
+  justify-items: end;
+  gap: var(--s2);
+  font-weight: 600;
+  color: var(--miss);
+}
+
+.admin .admin-btn {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.admin .admin-btn--miss {
+  background: var(--miss);
+  border-color: var(--miss);
+  color: var(--sheet);
+}
+
+.admin .admin-btn--miss-text {
+  color: var(--miss);
+  border-color: var(--miss);
+}
+
+.admin .admin-table .cell__note--error {
+  margin-top: var(--s2);
+}
+
+/* On a phone each service becomes its own small block, labelled field by
+   field, so nothing needs a sideways scroll. */
+@media (max-width: 640px) {
+  .admin .admin-form__cells {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin .admin-table thead {
+    display: none;
+  }
+
+  .admin .admin-table,
+  .admin .admin-table tbody,
+  .admin .admin-table tr,
+  .admin .admin-table td {
+    display: block;
+  }
+
+  .admin .admin-table tr {
+    padding: var(--s4) var(--s5);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .admin .admin-table tr.admin-table__editing {
+    padding: 0;
+  }
+
+  .admin .admin-table td {
+    padding: var(--s1) 0;
+    border-bottom: 0;
+  }
+
+  .admin .admin-table td[data-label='Duration']::before,
+  .admin .admin-table td[data-label='Status']::before {
+    content: attr(data-label) ' ';
+    display: inline-block;
+    min-width: 6.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .admin .admin-table .admin-table__actions {
+    padding-top: var(--s3);
+    text-align: left;
+  }
+
+  .admin .admin-table__buttons {
+    justify-content: flex-start;
+  }
+
+  .admin .admin-table__confirm {
+    justify-items: start;
+  }
+}
+
+/* The sheet's own edge closes the table; a rule there shows as a stray line. */
+.admin .admin-table tbody tr:last-child,
+.admin .admin-table tbody tr:last-child > td {
+  border-bottom: 0;
+}
