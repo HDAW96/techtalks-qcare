@@ -59,6 +59,12 @@
 .head__nav a.btn {
   color: #fff;
 }
+.head__who{
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  padding-left: var(--s4);
+  text-align: center;
+}
 
 .head__toggle {
   display: none;

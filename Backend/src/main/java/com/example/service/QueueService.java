@@ -249,6 +249,7 @@ public class QueueService {
         MedicalService service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
                         "That treatment was not found."));
+        ServiceCatalogService.requireActive(service);
 
         Patient patient = patientRepository.findByPhoneNumberAndFullName(phone, fullName)
                 .orElseGet(() -> patientRepository.save(new Patient(fullName, phone)));
@@ -370,6 +371,7 @@ public class QueueService {
         MedicalService service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SERVICE_NOT_FOUND",
                         "That treatment was not found."));
+        ServiceCatalogService.requireActive(service);
 
         Patient patient = userId != null ? signedInPatient(userId) : walkInPatient(request);
         requireNoActiveTicketToday(patient, "You are");
