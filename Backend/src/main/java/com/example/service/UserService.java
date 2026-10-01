@@ -24,5 +24,4 @@ public class UserService {
             .map(AdminUserResponse::of)
             .toList();
 }
-
 }
