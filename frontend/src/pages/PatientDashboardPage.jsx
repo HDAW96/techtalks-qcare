@@ -165,6 +165,7 @@ function NoTicket() {
 }
 
 function PatientDashboardPage() {
+  
   const { user, signOut } = useAuth()
   // Their real ticket today, if any, and their doctor's line (numbers only).
   const { ticket: yourTicket } = useMyTicket({ me: true })
@@ -284,6 +285,7 @@ function PatientDashboardPage() {
 
   return (
     <div className="page">
+      <title>{`${user.fullName}'s Dashboard - QCare`}</title>
       <SiteHeader />
 
       <main className="wrap dash">

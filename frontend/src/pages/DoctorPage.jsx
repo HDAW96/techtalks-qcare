@@ -74,6 +74,7 @@ function DoctorPage() {
 
   return (
     <div className="page">
+      <title>{`${user.fullName}'s Dashboard - QCare`}</title>
       <SiteHeader />
 
       <main className="wrap dr">
