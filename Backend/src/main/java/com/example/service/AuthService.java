@@ -4,13 +4,21 @@ import com.example.dto.AuthResponse;
 import com.example.dto.LoginDTO;
 import com.example.dto.RegisterDTO;
 import com.example.dto.UserResponse;
+
 import com.example.entity.Patient;
 import com.example.entity.User;
+
 import com.example.repository.PatientRepository;
 import com.example.repository.UserRepository;
+
 import com.example.security.JwtService;
+
+import com.example.util.Names;
+import com.example.util.Passwords;
 import com.example.util.PhoneNumbers;
+
 import com.example.web.ApiException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    /** Everyone who registers online is a patient. Staff accounts are made at the clinic. */
+    /**
+     * Everyone who registers online is a patient. Staff accounts are made at the
+     * clinic.
+     */
     private static final String ROLE_PATIENT = "PATIENT";
 
     private final UserRepository userRepository;
@@ -39,7 +50,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterDTO details) {
-        String fullName = trimmed(details.getFullName());
+        String fullName = Names.trimmed(details.getFullName());
         String phone = PhoneNumbers.normalise(details.getPhoneNumber());
         String password = details.getPassword();
 
@@ -51,7 +62,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");
         }
-        requireAcceptablePassword(password);
+        Passwords.requireAcceptablePassword(password);
 
         if (userRepository.existsByPhoneNumberAndFullName(phone, fullName)) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
@@ -74,7 +85,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginDTO credentials) {
-        String fullName = trimmed(credentials.getFullName());
+        String fullName = Names.trimmed(credentials.getFullName());
         String phone = PhoneNumbers.normalise(credentials.getPhoneNumber());
 
         // One message for every failure: saying which part was wrong tells an
@@ -113,7 +124,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CURRENT_PASSWORD_WRONG",
                     "Your current password is not right.");
         }
-        requireAcceptablePassword(newPassword);
+        Passwords.requireAcceptablePassword(newPassword);
         if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_PASSWORD",
                     "Please choose a password different from your current one.");
@@ -133,40 +144,8 @@ public class AuthService {
         return UserResponse.of(user, patientRepository.findByUser(user).orElse(null));
     }
 
-    /**
-     * The rules every new password must meet, on registering and on changing
-     * it. The register and change-password forms check the same four rules
-     * before submitting (frontend/src/password.js), so they never disagree.
-     */
-    private static void requireAcceptablePassword(String password) {
-        if (password == null || password.length() < 8) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_SHORT",
-                    "Your password must be at least 8 characters.");
-        }
-        if (!password.matches(".*[A-Z].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_UPPERCASE",
-                    "Your password must contain at least one uppercase letter.");
-        }
-        if (!password.matches(".*[a-z].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_LOWERCASE",
-                    "Your password must contain at least one lowercase letter.");
-        }
-        if (!password.matches(".*[^a-zA-Z0-9].*")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_NO_SPECIAL",
-                    "Your password must contain at least one special character.");
-        }
-    }
-
     private AuthResponse respond(User user, Patient patient) {
         String token = jwtService.issue(user.getUserId(), user.getRole());
         return new AuthResponse(token, UserResponse.of(user, patient));
-    }
-
-    private static String trimmed(String value) {
-        if (value == null) {
-            return null;
-        }
-        String cleaned = value.trim().replaceAll("[ ]+", " ");
-        return cleaned.isEmpty() ? null : cleaned;
     }
 }
