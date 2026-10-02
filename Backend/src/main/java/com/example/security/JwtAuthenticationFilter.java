@@ -1,4 +1,4 @@
-ackage com.example.security;
+package com.example.security;
 
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -43,32 +43,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             Claims claims = jwtService.read(header.substring(7));
-           
-        if (claims != null) {
+            
+            if (claims != null) {
+                Integer userId = Integer.valueOf(claims.getSubject());
+                var user = userRepository.findById(userId);
 
-            Integer userId = Integer.valueOf(claims.getSubject());
-
-            var user = userRepository.findById(userId);
-
-            if (user.isPresent() && Boolean.TRUE.equals(user.get().getActive())) {
-
-                String role = user.get().getRole();
-
-                var authorities =
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role));
-
-                var authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userId,
-                                null,
-                                authorities);
-
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                if (user.isPresent() && Boolean.TRUE.equals(user.get().getActive())) {
+                    String role = user.get().getRole();
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                    var authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                    
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         }
-    }
 
-    filterChain.doFilter(request, response);
-}
+        filterChain.doFilter(request, response);
+    }
 }
