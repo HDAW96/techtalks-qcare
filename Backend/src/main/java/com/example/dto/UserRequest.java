@@ -51,6 +51,3 @@ public class UserRequest {
     }
 }
 
-    filterChain.doFilter(request, response);
-}
-}
