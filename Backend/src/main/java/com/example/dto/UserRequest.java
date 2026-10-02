@@ -5,6 +5,8 @@ public class UserRequest {
     private String email;
     private String password;
     private String role;
+    private String fullName;
+    private String phoneNumber;
 
     // Constructors
     public UserRequest() {
@@ -49,5 +51,20 @@ public class UserRequest {
     public void setRole(String role) {
         this.role = role;
     }
-}
 
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+}
