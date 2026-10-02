@@ -33,11 +33,8 @@ public class AdminController {
         return userService.searchUsers(role, search);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AdminUserResponse> updateUser(
-            @PathVariable Integer id,
-            @RequestBody UserRequest request) {
-        User updated = userService.updateUser(id, request);
-        return ResponseEntity.ok(AdminUserResponse.of(updated));
+    @PostMapping
+    public ResponseEntity<AdminUserResponse> createUser(@RequestBody CreateUserDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 }
