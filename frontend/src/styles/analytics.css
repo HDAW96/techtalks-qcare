@@ -1,0 +1,386 @@
+/* Admin analytics (SCRUM-92) only. Every rule starts with .admin, because
+   Vite puts all CSS in one file and nothing here may restyle another screen. */
+
+/* ---------- date range ---------- */
+
+.admin .analytics__range {
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.admin .analytics__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.admin .analytics__preset {
+  padding: var(--s2) var(--s4);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.admin .analytics__preset:hover {
+  background: var(--done-wash);
+}
+
+/* The chosen range is marked by its border and a tick, not colour alone. */
+.admin .analytics__preset[aria-pressed='true'] {
+  border-color: var(--live);
+  background: var(--live-wash);
+  color: var(--live);
+}
+
+.admin .analytics__preset[aria-pressed='true']::before {
+  content: '✓ ';
+}
+
+.admin .analytics__custom {
+  margin-top: var(--s4);
+}
+
+.admin .analytics__custom-cells {
+  grid-template-columns: repeat(2, minmax(0, 220px));
+}
+
+.admin .analytics__custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.admin .analytics__custom-error,
+.admin .analytics__error {
+  margin-top: var(--s4);
+}
+
+/* ---------- the numbers ---------- */
+
+.admin .analytics__body {
+  padding: var(--s5);
+  transition: opacity 160ms ease-out;
+}
+
+.admin .analytics__body.is-loading {
+  opacity: 0.5;
+}
+
+.admin .analytics__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s3);
+  margin: 0;
+}
+
+.admin .analytics__tile {
+  padding: var(--s4);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+}
+
+.admin .analytics__tile dd {
+  margin: 0;
+}
+
+.admin .analytics__tile-label {
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.admin .analytics__tile-value {
+  margin-top: var(--s1);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin .analytics__tile-note {
+  margin-top: var(--s1);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+/* ---------- chart cards ---------- */
+
+.admin .analytics__charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+  margin-top: var(--s5);
+}
+
+.admin .analytics__card {
+  min-width: 0;
+  padding: var(--s4) var(--s5) var(--s5);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+}
+
+.admin .analytics__card--wide {
+  grid-column: 1 / -1;
+}
+
+.admin .analytics__card-title {
+  font-size: 1rem;
+}
+
+.admin .analytics__card-note {
+  margin-top: var(--s1);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.admin .analytics-chart {
+  margin: var(--s4) 0 0;
+}
+
+.admin .analytics-chart__empty {
+  margin-top: var(--s4);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.admin .analytics-chart__caption {
+  margin-top: var(--s3);
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.admin .analytics-chart__numbers {
+  margin-top: var(--s3);
+  font-size: 0.8125rem;
+}
+
+.admin .analytics-chart__numbers summary {
+  cursor: pointer;
+  color: var(--live);
+  font-weight: 600;
+}
+
+.admin .analytics-chart__numbers table {
+  margin-top: var(--s2);
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin .analytics-chart__numbers th,
+.admin .analytics-chart__numbers td {
+  padding: var(--s1) var(--s5) var(--s1) 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.admin .analytics-chart__numbers th {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* ---------- hour columns ---------- */
+
+.admin .analytics-hours {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 180px;
+  padding-top: var(--s5);
+}
+
+.admin .analytics-hours__col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+/* The whole column is the hover target, not just the painted bar. */
+.admin .analytics-hours__track {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.admin .analytics-hours__bar {
+  width: min(70%, 36px);
+  background: var(--live-bright);
+  border-radius: 4px 4px 0 0;
+  transition: height 240ms var(--rise-ease);
+}
+
+.admin .analytics-hours__col.is-peak .analytics-hours__bar {
+  background: var(--live);
+}
+
+.admin .analytics-hours__value {
+  margin-bottom: 2px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+.admin .analytics-hours__hour {
+  padding-top: var(--s1);
+  min-height: 1.5em;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin .analytics-hours__col:hover .analytics-hours__track,
+.admin .analytics-hours__col:focus-visible .analytics-hours__track {
+  background: var(--done-wash);
+}
+
+.admin .analytics-hours__col:focus-visible {
+  box-shadow: 0 0 0 2px var(--live);
+  border-radius: 4px;
+}
+
+.admin .analytics-hours__tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: var(--s1) var(--s2);
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.admin .analytics-hours__col:hover .analytics-hours__tip,
+.admin .analytics-hours__col:focus-visible .analytics-hours__tip {
+  display: block;
+}
+
+/* ---------- ranked bars ---------- */
+
+.admin .analytics-bars {
+  display: grid;
+  gap: var(--s3);
+  margin: var(--s4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin .analytics-bars__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s1) var(--s3);
+  align-items: baseline;
+}
+
+.admin .analytics-bars__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.admin .analytics-bars__value {
+  font-weight: 600;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin .analytics-bars__unit {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.admin .analytics-bars__track {
+  grid-column: 1 / -1;
+  height: 10px;
+  border-radius: 0 4px 4px 0;
+  background: var(--done-wash);
+}
+
+.admin .analytics-bars__bar {
+  display: block;
+  height: 100%;
+  background: var(--live-bright);
+  border-radius: 0 4px 4px 0;
+  transition: width 240ms var(--rise-ease);
+}
+
+.admin .analytics-bars__row.is-peak .analytics-bars__bar {
+  background: var(--live);
+}
+
+/* ---------- footnote ---------- */
+
+.admin .analytics__foot {
+  border-radius: 0 0 25px 25px;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.admin .analytics__foot p {
+  max-width: var(--measure);
+}
+
+.admin .analytics__foot strong {
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .admin .analytics__range,
+  .admin .analytics__body {
+    padding-inline: var(--s4);
+  }
+
+  .admin .analytics__charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Two tiles a row; the fifth takes the whole last row instead of
+     sitting alone in half of it. */
+  .admin .analytics__tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin .analytics__tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .admin .analytics__custom-cells {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin .analytics__tile-value {
+    font-size: 1.625rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin .analytics-hours__bar,
+  .admin .analytics-bars__bar,
+  .admin .analytics__body {
+    transition: none;
+  }
+}

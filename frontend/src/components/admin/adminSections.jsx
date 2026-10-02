@@ -1,3 +1,4 @@
+import AnalyticsDashboard from './AnalyticsDashboard'
 import ManageUsers from './ManageUsers'
 import ManageServices from './ManageServices'
 import SectionPlaceholder from './SectionPlaceholder'
@@ -9,6 +10,6 @@ export const ADMIN_SECTIONS = [
   { id: 'users', label: 'Users', element: <ManageUsers /> },
   { id: 'services', label: 'Services', element: <ManageServices /> },
   { id: 'subscriptions', label: 'Subscriptions', element: <SectionPlaceholder title="Subscriptions" /> },
-  { id: 'analytics', label: 'Analytics', element: <SectionPlaceholder title="Analytics" /> },
+  { id: 'analytics', label: 'Analytics', element: <AnalyticsDashboard /> },
   { id: 'reports', label: 'Reports', element: <SectionPlaceholder title="Reports" /> },
 ]
