@@ -2,12 +2,17 @@ package com.example.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.dto.AdminUserResponse;
+import com.example.dto.CreateUserDTO;
 import com.example.service.UserService;
 
 @RestController
@@ -26,5 +31,10 @@ public class AdminController {
             @RequestParam(required = false) String search
     ) {
         return userService.searchUsers(role, search);
+    }
+
+    @PostMapping
+    public ResponseEntity<AdminUserResponse> createUser(@RequestBody CreateUserDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 }
