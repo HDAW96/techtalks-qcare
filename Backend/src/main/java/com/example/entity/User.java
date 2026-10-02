@@ -35,6 +35,10 @@ public class User {
     @Column(name = "must_change_password", nullable = false)
     private Boolean mustChangePassword = false;
 
+        
+    @Column(nullable = false)
+     private Boolean active = true;
+
     public User() {
     }
 
@@ -89,8 +93,15 @@ public class User {
     public Boolean getMustChangePassword() {
         return mustChangePassword;
     }
-
+      
     public void setMustChangePassword(Boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+         public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
