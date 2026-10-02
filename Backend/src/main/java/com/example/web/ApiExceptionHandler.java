@@ -3,8 +3,12 @@ package com.example.web;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 
@@ -36,6 +40,45 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", "That request was not understood. Please try again.",
                         "error", "BODY_INVALID"));
+    }
+
+    /**
+     * An address no controller answers. Spring 6 reports this as an
+     * exception rather than its own 404 page, so without this it fell to the
+     * catch-all and a mistyped URL looked like a server crash.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNoSuchAddress(NoResourceFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", "That address does not exist.",
+                        "error", "NOT_FOUND"));
+    }
+
+    /** A path or query value of the wrong type, e.g. /api/doctors/abc. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleWrongType(
+            MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Part of that request is not valid: " + e.getName() + ".",
+                        "error", "PARAM_INVALID"));
+    }
+
+    /** A required query value left out, e.g. availability without serviceId. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, String>> handleMissingValue(
+            MissingServletRequestParameterException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Part of that request is missing: " + e.getParameterName() + ".",
+                        "error", "PARAM_MISSING"));
+    }
+
+    /** A real address called with the wrong method, e.g. GET on login. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, String>> handleWrongMethod(
+            HttpRequestMethodNotSupportedException e) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(Map.of("message", "That action is not allowed here.",
+                        "error", "METHOD_NOT_ALLOWED"));
     }
 
     /**
