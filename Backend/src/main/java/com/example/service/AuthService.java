@@ -96,6 +96,13 @@ public class AuthService {
         if (fullName == null || phone == null || credentials.getPassword() == null) {
             throw wrong;
         }
+        if (!Boolean.TRUE.equals(user.getActive())) {
+         throw new ApiException(
+            HttpStatus.UNAUTHORIZED,
+            "ACCOUNT_DEACTIVATED",
+            "This account has been deactivated."
+    );
+}
         User user = userRepository.findByPhoneNumberAndFullName(phone, fullName)
                 .orElseThrow(() -> wrong);
         if (!passwordEncoder.matches(credentials.getPassword(), user.getPasswordHash())) {
