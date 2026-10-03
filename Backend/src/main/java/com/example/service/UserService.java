@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -29,6 +30,7 @@ public class UserService {
     private static final String ROLE_DOCTOR = "DOCTOR";
     private static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
     private static final String ROLE_ADMIN = "ADMIN";
+    private static final Set<String> STAFF_ROLES = Set.of(ROLE_DOCTOR, ROLE_RECEPTIONIST, ROLE_ADMIN);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -82,7 +84,7 @@ public class UserService {
                     "Please enter a valid Lebanese phone number.");
         }
         Passwords.requireAcceptablePassword(password);
-        if (!ROLE_DOCTOR.equals(role) && !ROLE_RECEPTIONIST.equals(role) && !ROLE_ADMIN.equals(role)) {
+        if (role == null || !STAFF_ROLES.contains(role)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "ROLE_INVALID",
                     "Choose a role: doctor, receptionist or admin.");
         }
@@ -108,25 +110,90 @@ public class UserService {
         return AdminUserResponse.of(user);
     }
 
+    /**
+     * An admin edits a user. Only the fields sent are changed, and each one is
+     * checked by the same rules as createUser. A password set here is again only
+     * temporary, so the user must choose their own on next sign-in.
+     */
+    @Transactional
     public UserResponse updateUser(Integer id, UserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
                         "USER_NOT_FOUND", "User not found"));
 
+        // Everything is checked before the user is touched: the duplicate lookup
+        // below would otherwise flush a half-edited user and hit the database's
+        // own unique (phone, name) rule as a 500 instead of a clear 409.
+        String fullName = user.getFullName();
         if (request.getFullName() != null) {
-            user.setFullName(request.getFullName());
-        }
-        if (request.getPhoneNumber() != null) {
-            user.setPhoneNumber(request.getPhoneNumber());
-        }
-        if (request.getRole() != null) {
-            user.setRole(request.getRole());
-        }
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            fullName = Names.trimmed(request.getFullName());
+            if (fullName == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
+                        "Please enter a valid full name.");
+            }
         }
 
+        String phone = user.getPhoneNumber();
+        if (request.getPhoneNumber() != null) {
+            phone = PhoneNumbers.normalise(request.getPhoneNumber());
+            if (!PhoneNumbers.isValidLebanese(phone)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
+                        "Please enter a valid Lebanese phone number.");
+            }
+        }
+
+        String oldRole = user.getRole();
+        String newRole = oldRole;
+        if (request.getRole() != null) {
+            newRole = request.getRole().trim().toUpperCase();
+            if (!STAFF_ROLES.contains(newRole)) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "ROLE_INVALID",
+                        "Role must be DOCTOR, RECEPTIONIST, or ADMIN.");
+            }
+        }
+
+        String password = request.getPassword();
+        boolean newPassword = password != null && !password.isBlank();
+        if (newPassword) {
+            Passwords.requireAcceptablePassword(password);
+        }
+
+        boolean sameAccount = fullName.equals(user.getFullName()) && phone.equals(user.getPhoneNumber());
+        if (!sameAccount && userRepository.existsByPhoneNumberAndFullName(phone, fullName)) {
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
+                    "An account already exists for this name and phone number.");
+        }
+
+        user.setFullName(fullName);
+        user.setPhoneNumber(phone);
+        user.setRole(newRole);
+        if (newPassword) {
+            user.setPasswordHash(passwordEncoder.encode(password));
+            user.setMustChangePassword(true);
+        }
         userRepository.save(user);
+
+        // A user moved to a new role needs that role's row, or the rest of the
+        // app cannot find them (a doctor with no row has no schedule or queue).
+        if (!newRole.equals(oldRole)) {
+            switch (newRole) {
+                case ROLE_DOCTOR -> {
+                    if (doctorRepository.findByUser(user).isEmpty()) {
+                        doctorRepository.save(new Doctor(user, null));
+                    }
+                }
+                case ROLE_RECEPTIONIST -> {
+                    if (receptionistRepository.findByUser(user).isEmpty()) {
+                        receptionistRepository.save(new Receptionist(user));
+                    }
+                }
+                default -> {
+                    if (adminRepository.findByUser(user).isEmpty()) {
+                        adminRepository.save(new Admin(user));
+                    }
+                }
+            }
+        }
 
         return new UserResponse(user.getUserId(), user.getFullName(),
                 user.getPhoneNumber(), user.getRole());
