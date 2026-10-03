@@ -248,6 +248,6 @@ public class UserService {
 
     // 6. Soft delete
     user.setActive(false);
-    userRepository.save(user);
+    UserRepository.save(user);
 }
 }
