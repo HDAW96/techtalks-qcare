@@ -47,11 +47,9 @@ public class AdminController {
     public UserResponse updateUser(@PathVariable Integer id, @RequestBody UserRequest request) {
         return userService.updateUser(id, request);
     }
-    @DeleteMapping("/{id}")
-    public void deactivateUser(
-      @PathVariable Integer id,
-        Authentication authentication) {
-
-    userService.deactivateUser(id, authentication);
-}
+   @DeleteMapping("/{id}")
+   public ResponseEntity<Void> deactivateUser(
+     @PathVariable Integer id, Authentication authentication) {
+      userService.deactivateUser(id, authentication);
+        return ResponseEntity.noContent().build();
 }
