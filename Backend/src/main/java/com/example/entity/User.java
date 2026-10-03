@@ -1,7 +1,7 @@
 package com.example.entity;
 
 import jakarta.persistence.*;
-
+import org.hibernate.annotations.ColumnDefault;
 /**
  * A sign-in account. Patients sign in with phone number + full name + password;
  * doctors and receptionists use the same table with a different role.
@@ -34,6 +34,10 @@ public class User {
     /** Set when a receptionist resets the password at the desk. */
     @Column(name = "must_change_password", nullable = false)
     private Boolean mustChangePassword = false;
+
+   @Column(nullable = false)
+   @ColumnDefault("true")          
+   private Boolean active = true;
 
     public User() {
     }
@@ -89,8 +93,15 @@ public class User {
     public Boolean getMustChangePassword() {
         return mustChangePassword;
     }
-
+      
     public void setMustChangePassword(Boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+         public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
