@@ -247,6 +247,7 @@ public class UserService {
     }
 
     // 6. Soft delete
-    userRepository.deactivateUser(id);
+    user.setActive(false);
+    userRepository.save(user);
 }
 }
