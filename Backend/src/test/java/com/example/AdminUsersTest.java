@@ -22,11 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The admin creating staff accounts: each role gets its own row, the new user
- * must pick their own password, and the same rules as registering apply.
+ * The admin creating and editing staff accounts: each role gets its own row,
+ * the user must pick their own password, and the same rules as registering apply.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -142,6 +143,58 @@ class AdminUsersTest {
         expectError(send(admin, staff("Nadine Rizk", uniquePhone(), null)), 400, "ROLE_INVALID");
     }
 
+    @Test
+    void movingAUserToANewRoleCreatesThatRolesRow() throws Exception {
+        String admin = signInAsAdmin();
+        int id = body(send(admin, staff("Karim Fares", uniquePhone(), "RECEPTIONIST"))
+                .andExpect(status().isCreated())).path("userId").asInt();
+
+        JsonNode updated = body(update(admin, id, Map.of("role", " doctor "))
+                .andExpect(status().isOk()));
+
+        assertThat(updated.path("role").asText()).isEqualTo("DOCTOR");
+        User user = userRepository.findById(id).orElseThrow();
+        assertThat(doctorRepository.findByUser(user)).isPresent();
+    }
+
+    @Test
+    void updatesFollowTheSameRules() throws Exception {
+        String admin = signInAsAdmin();
+        String phone = uniquePhone();
+        int id = body(send(admin, staff("Maya Haddad", phone, "RECEPTIONIST"))
+                .andExpect(status().isCreated())).path("userId").asInt();
+
+        expectError(update(admin, id, Map.of("fullName", "   ")), 400, "NAME_REQUIRED");
+        expectError(update(admin, id, Map.of("phoneNumber", "12345")), 400, "PHONE_INVALID");
+        expectError(update(admin, id, Map.of("role", "PATIENT")), 400, "ROLE_INVALID");
+        expectError(update(admin, id, Map.of("password", "changeme123")), 400, "PASSWORD_NO_UPPERCASE");
+        // Taking the name and phone of another account is refused too.
+        expectError(update(admin, id, Map.of("fullName", ADMIN_NAME, "phoneNumber", ADMIN_PHONE)),
+                409, "ACCOUNT_EXISTS");
+        expectError(update(admin, 999999, Map.of("fullName", "Nobody")), 404, "USER_NOT_FOUND");
+
+        // A rejected update changes nothing.
+        User user = userRepository.findById(id).orElseThrow();
+        assertThat(user.getFullName()).isEqualTo("Maya Haddad");
+        assertThat(user.getPhoneNumber()).isEqualTo(phone);
+        assertThat(user.getRole()).isEqualTo("RECEPTIONIST");
+    }
+
+    @Test
+    void aPasswordSetByTheAdminMustBeChangedOnSignIn() throws Exception {
+        String admin = signInAsAdmin();
+        String phone = uniquePhone();
+        int id = body(send(admin, staff("Rana Saleh", phone, "ADMIN"))
+                .andExpect(status().isCreated())).path("userId").asInt();
+
+        update(admin, id, Map.of("password", "New-pass1")).andExpect(status().isOk());
+
+        String token = signIn(phone, "Rana Saleh", "New-pass1");
+        JsonNode me = body(mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()));
+        assertThat(me.path("mustChangePassword").asBoolean()).isTrue();
+    }
+
     private static Map<String, Object> staff(String fullName, String phone, String role) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("fullName", fullName);
@@ -153,6 +206,13 @@ class AdminUsersTest {
 
     private ResultActions send(String token, Map<String, ?> payload) throws Exception {
         return mvc.perform(post("/api/admin/users")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(payload)));
+    }
+
+    private ResultActions update(String token, int id, Map<String, ?> payload) throws Exception {
+        return mvc.perform(put("/api/admin/users/" + id)
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(payload)));
