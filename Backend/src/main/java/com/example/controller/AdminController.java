@@ -53,3 +53,5 @@ public class AdminController {
       UserService.deactivateUser(id, authentication);
         return ResponseEntity.noContent().build();
 }
+    
+}
