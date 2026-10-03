@@ -50,6 +50,6 @@ public class AdminController {
    @DeleteMapping("/{id}")
    public ResponseEntity<Void> deactivateUser(
      @PathVariable Integer id, Authentication authentication) {
-      userService.deactivateUser(id, authentication);
+      UserService.deactivateUser(id, authentication);
         return ResponseEntity.noContent().build();
 }
