@@ -1,7 +1,8 @@
 package com.example.controller;
 
 import java.util.List;
-
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,4 +47,11 @@ public class AdminController {
     public UserResponse updateUser(@PathVariable Integer id, @RequestBody UserRequest request) {
         return userService.updateUser(id, request);
     }
+   @DeleteMapping("/{id}")
+   public ResponseEntity<Void> deactivateUser(
+     @PathVariable Integer id, Authentication authentication) {
+      userService.deactivateUser(id, authentication);
+        return ResponseEntity.noContent().build();
+}
+    
 }

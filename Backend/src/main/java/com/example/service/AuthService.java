@@ -85,24 +85,32 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginDTO credentials) {
-        String fullName = Names.trimmed(credentials.getFullName());
-        String phone = PhoneNumbers.normalise(credentials.getPhoneNumber());
+    String fullName = Names.trimmed(credentials.getFullName());
+    String phone = PhoneNumbers.normalise(credentials.getPhoneNumber());
 
-        // One message for every failure: saying which part was wrong tells an
-        // attacker which phone numbers and names are registered.
-        ApiException wrong = new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS",
-                "Those sign-in details are not right. Please check and try again.");
+    ApiException wrong = new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS",
+            "Those sign-in details are not right. Please check and try again.");
 
-        if (fullName == null || phone == null || credentials.getPassword() == null) {
-            throw wrong;
-        }
-        User user = userRepository.findByPhoneNumberAndFullName(phone, fullName)
-                .orElseThrow(() -> wrong);
-        if (!passwordEncoder.matches(credentials.getPassword(), user.getPasswordHash())) {
-            throw wrong;
-        }
-        return respond(user, patientRepository.findByUser(user).orElse(null));
+    if (fullName == null || phone == null || credentials.getPassword() == null) {
+        throw wrong;
     }
+    
+    User user = userRepository.findByPhoneNumberAndFullName(phone, fullName)
+            .orElseThrow(() -> wrong);
+    
+    if (!Boolean.TRUE.equals(user.getActive())) {
+        throw new ApiException(
+            HttpStatus.UNAUTHORIZED,
+            "ACCOUNT_DEACTIVATED",
+            "This account has been deactivated."
+        );
+    }
+    
+    if (!passwordEncoder.matches(credentials.getPassword(), user.getPasswordHash())) {
+        throw wrong;
+    }
+    return respond(user, patientRepository.findByUser(user).orElse(null));
+}
 
     /**
      * Replaces the signed-in user's password. The current one is asked for

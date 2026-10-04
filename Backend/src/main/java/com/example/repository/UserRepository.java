@@ -3,8 +3,9 @@ package com.example.repository;
 import com.example.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.repository.query.Param;
-
+import org.springframework.data.jpa.repository.Modifying;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +18,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByPhoneNumberAndFullName(String phoneNumber, String fullName);
 
     boolean existsByPhoneNumberAndFullName(String phoneNumber, String fullName);
-
+     long countByRoleAndActiveTrue(String role);
     /**
      * Used by the seeder to decide whether the receptionist accounts already
      * exist. They need their own check because the doctor block only runs on
@@ -38,5 +39,8 @@ List<User> searchUsers(
         @Param("search") String search
 );
 
-
+    @Modifying
+    @Transactional
+    @Query("UPDATE User u SET u.active = false WHERE u.userId = :userId")
+    int deactivateUser(@Param("userId") Integer userId);
 }

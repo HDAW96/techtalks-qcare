@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Set;
@@ -198,4 +199,55 @@ public class UserService {
         return new UserResponse(user.getUserId(), user.getFullName(),
                 user.getPhoneNumber(), user.getRole());
     }
+    @Transactional
+   public void deactivateUser(Integer id, Authentication authentication) {
+
+    // 1. Find the target user
+    User user = userRepository.findById(id)
+            .orElseThrow(() -> new ApiException(
+                    HttpStatus.NOT_FOUND,
+                    "USER_NOT_FOUND",
+                    "User not found"
+            ));
+
+    // 2. Get the admin who is making the request
+    Integer actingAdminId = Integer.valueOf(authentication.getName());
+
+    // 3. Admin cannot deactivate themselves
+    if (actingAdminId.equals(user.getUserId())) {
+        throw new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "CANNOT_DEACTIVATE_SELF",
+                "You cannot deactivate your own account."
+        );
+    }
+
+    // 4. Reject already deactivated users
+    if (!Boolean.TRUE.equals(user.getActive())) {
+        throw new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "USER_ALREADY_DEACTIVATED",
+                "User is already deactivated."
+        );
+    }
+
+    // 5. The last active admin cannot be deactivated
+    if (ROLE_ADMIN.equals(user.getRole())) {
+
+        long activeAdminCount =
+                userRepository.countByRoleAndActiveTrue(ROLE_ADMIN);
+
+        if (activeAdminCount <= 1) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "LAST_ADMIN",
+                    "The last remaining admin cannot be deactivated."
+            );
+        }
+    }
+
+    // 6. Soft delete
+    user.setActive(false);
+    userRepository.save(user);
+}
 }
