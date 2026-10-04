@@ -24,6 +24,7 @@ import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
@@ -32,6 +33,8 @@ public class UserService {
     private static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
     private static final String ROLE_ADMIN = "ADMIN";
     private static final Set<String> STAFF_ROLES = Set.of(ROLE_DOCTOR, ROLE_RECEPTIONIST, ROLE_ADMIN);
+    /** Digits with the spaces, dashes, brackets and + people type around them. */
+    private static final Pattern PHONE_LIKE = Pattern.compile("[\\d\\s+()-]*\\d[\\d\\s+()-]*");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -51,13 +54,45 @@ public class UserService {
         this.adminRepository = adminRepository;
     }
 
+    /**
+     * Both filters are optional. The role is matched in any case. A search
+     * that looks like a phone number is put in the stored shape first, so
+     * "03 400 001" and "+961 3 400 001" both find 03400001.
+     */
     public List<AdminUserResponse> searchUsers(String role, String search) {
+        String roleFilter = role == null || role.isBlank() ? null : role.trim().toUpperCase();
 
-        List<User> users = userRepository.searchUsers(role, search);
+        String text = search == null || search.isBlank() ? null : search.trim();
+        if (text != null && PHONE_LIKE.matcher(text).matches()) {
+            text = phoneSearch(text);
+        }
+
+        List<User> users = userRepository.searchUsers(roleFilter, text == null ? null : likeEscaped(text));
 
         return users.stream()
                 .map(AdminUserResponse::of)
                 .toList();
+    }
+
+    /**
+     * Part of a number, in the stored shape: only digits, and the +961 or
+     * 00961 prefix swapped for the local 0. Unlike PhoneNumbers.normalise no
+     * 0 is added in front, so "400 001" still finds 03400001.
+     */
+    private static String phoneSearch(String typed) {
+        String digits = typed.replaceAll("[^0-9+]", "");
+        if (digits.startsWith("+961")) {
+            return "0" + digits.substring(4);
+        }
+        if (digits.startsWith("00961")) {
+            return "0" + digits.substring(5);
+        }
+        return digits.replace("+", "");
+    }
+
+    /** Marks %, _ and the escape character itself as plain text for LIKE ... ESCAPE '!'. */
+    private static String likeEscaped(String text) {
+        return text.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     /**

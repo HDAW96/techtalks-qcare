@@ -25,14 +25,20 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * an empty database.
      */
     boolean existsByRole(String role);
+    /**
+     * The admin's user list. `search` must already be escaped with '!' (see
+     * UserService.searchUsers), so a typed % or _ is looked for as itself.
+     * '!' rather than a backslash, which MySQL reads as an escape of its own.
+     */
     @Query("""
     SELECT u FROM User u
     WHERE (:role IS NULL OR u.role = :role)
       AND (
           :search IS NULL
-          OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
-          OR u.phoneNumber LIKE CONCAT('%', :search, '%')
+          OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '!'
+          OR u.phoneNumber LIKE CONCAT('%', :search, '%') ESCAPE '!'
       )
+    ORDER BY LOWER(u.fullName), u.userId
 """)
 List<User> searchUsers(
         @Param("role") String role,
