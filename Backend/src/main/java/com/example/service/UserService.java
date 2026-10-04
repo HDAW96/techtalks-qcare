@@ -188,6 +188,15 @@ public class UserService {
             }
         }
 
+        // The same rule as deactivateUser: moving the last admin to another
+        // role would leave nobody able to open the admin pages.
+        if (ROLE_ADMIN.equals(oldRole) && !ROLE_ADMIN.equals(newRole)
+                && Boolean.TRUE.equals(user.getActive())
+                && userRepository.countByRoleAndActiveTrue(ROLE_ADMIN) <= 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LAST_ADMIN",
+                    "The last remaining admin cannot be given another role.");
+        }
+
         String password = request.getPassword();
         boolean newPassword = password != null && !password.isBlank();
         if (newPassword) {

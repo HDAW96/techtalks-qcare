@@ -8,17 +8,22 @@ public class AdminUserResponse {
     private final String fullName;
     private final String phoneNumber;
     private final String role;
+    /** False once the user has been removed: the account is kept, only switched off. */
+    private final boolean active;
 
-    public AdminUserResponse(Integer userId, String fullName, String phoneNumber, String role) {
+    public AdminUserResponse(Integer userId, String fullName, String phoneNumber, String role,
+            boolean active) {
         this.userId = userId;
         this.fullName = fullName;
         this.phoneNumber = phoneNumber;
         this.role = role;
+        this.active = active;
     }
 
     public static AdminUserResponse of(User user) {
         return new AdminUserResponse(
-                user.getUserId(), user.getFullName(), user.getPhoneNumber(), user.getRole());
+                user.getUserId(), user.getFullName(), user.getPhoneNumber(), user.getRole(),
+                Boolean.TRUE.equals(user.getActive()));
     }
 
     public Integer getUserId() {
@@ -35,5 +40,9 @@ public class AdminUserResponse {
 
     public String getRole() {
         return role;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

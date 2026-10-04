@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Cell from '../Cell'
+import Mark from '../Mark'
 import { ROLE } from '../../constants'
 import { listUsers } from './usersApi'
 
@@ -122,16 +123,20 @@ function ManageUsers() {
               <th>Name</th>
               <th>Phone</th>
               <th>Role</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.userId}>
+              <tr key={u.userId} className={u.active ? undefined : 'is-inactive'}>
                 <td data-label="Name">
                   <span className="admin-table__name">{u.fullName}</span>
                 </td>
                 <td data-label="Phone">{u.phoneNumber}</td>
                 <td data-label="Role">{ROLE_LABEL[u.role] ?? u.role}</td>
+                <td data-label="Status">
+                  <Mark status={u.active ? 'live' : 'done'} label={u.active ? 'Active' : 'Removed'} />
+                </td>
               </tr>
             ))}
           </tbody>
