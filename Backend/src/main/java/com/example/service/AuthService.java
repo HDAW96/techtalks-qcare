@@ -97,17 +97,19 @@ public class AuthService {
     
     User user = userRepository.findByPhoneNumberAndFullName(phone, fullName)
             .orElseThrow(() -> wrong);
-    
+
+    if (!passwordEncoder.matches(credentials.getPassword(), user.getPasswordHash())) {
+        throw wrong;
+    }
+
+    // Checked only after the password, so a wrong guess cannot tell anyone
+    // that this name and phone belong to a removed account.
     if (!Boolean.TRUE.equals(user.getActive())) {
         throw new ApiException(
             HttpStatus.UNAUTHORIZED,
             "ACCOUNT_DEACTIVATED",
             "This account has been deactivated."
         );
-    }
-    
-    if (!passwordEncoder.matches(credentials.getPassword(), user.getPasswordHash())) {
-        throw wrong;
     }
     return respond(user, patientRepository.findByUser(user).orElse(null));
 }
