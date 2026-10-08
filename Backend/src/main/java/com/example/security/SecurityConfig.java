@@ -64,6 +64,8 @@ public class SecurityConfig {
                         // Everything under /api/admin manages staff accounts,
                         // so only an admin may use it.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Patient search returns identifying details to the desk.
+                        .requestMatchers("/api/patients/**").hasAnyRole("RECEPTIONIST", "ADMIN")
                         // Anyone may see which doctors and services exist -
                         // the booking screen shows these before sign-in.
                         .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/services/**").permitAll()

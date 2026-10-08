@@ -47,6 +47,11 @@ Every endpoint under `/api/queues` answers with patients' names and phone
 numbers, so the whole path is restricted to `ROLE_RECEPTIONIST` in
 `SecurityConfig`.
 
+Patient search is available to receptionists and admins at
+`GET /api/patients?search=...`. It matches names case-insensitively or stored
+phone numbers regardless of common Lebanese number formatting, treats `%` and
+`_` as literal search characters, and orders results by name.
+
 ### Recommendations
 
 The patient-facing queue board still needs an endpoint of its own. It cannot
