@@ -26,7 +26,7 @@ public class Appointment {
     @Column(name = "appointment_datetime", nullable = false)
     private LocalDateTime appointmentDatetime;
 
-    /** BOOKED, COMPLETED, CANCELLED or MISSED - matches APPOINTMENT_STATUS in the frontend constants. */
+    /** BOOKED, CHECKED_IN, COMPLETED, CANCELLED or MISSED -matches APPOINTMENT_STATUS in the frontend constants. */
     @Column(name = "status", nullable = false, length = 20)
     private String status = "BOOKED";
 

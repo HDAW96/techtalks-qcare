@@ -456,11 +456,13 @@ public class BookingService {
                 "You can only complete your own appointments.");
     }
 
-    if (!"BOOKED".equals(appointment.getStatus())) {
+    // A patient checked in at the desk is still an open visit.
+    if (!"BOOKED".equals(appointment.getStatus())
+            && !"CHECKED_IN".equals(appointment.getStatus())) {
         throw new ApiException(
                 HttpStatus.CONFLICT,
                 "NOT_COMPLETABLE",
-                "Only a booked appointment can be completed.");
+                "Only a booked or checked-in appointment can be completed.");
     }
 
    

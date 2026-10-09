@@ -6,6 +6,7 @@
 
 export const APPOINTMENT_STATUS = {
   BOOKED: 'BOOKED',
+  CHECKED_IN: 'CHECKED_IN',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
   MISSED: 'MISSED',
@@ -51,6 +52,7 @@ export const ROUTE_ROLES = {
    change to the agreed strings does not touch any component. */
 export const STATUS_MARK = {
   [APPOINTMENT_STATUS.BOOKED]: 'wait',
+  [APPOINTMENT_STATUS.CHECKED_IN]: 'wait',
   [APPOINTMENT_STATUS.COMPLETED]: 'done',
   [APPOINTMENT_STATUS.CANCELLED]: 'miss',
   [APPOINTMENT_STATUS.MISSED]: 'miss',

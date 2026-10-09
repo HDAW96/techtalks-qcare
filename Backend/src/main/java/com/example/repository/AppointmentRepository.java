@@ -52,7 +52,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             select a from Appointment a
             join fetch a.medicalService
             where a.doctor = :doctor
-              and a.status = 'BOOKED'
+              and a.status in ('BOOKED', 'CHECKED_IN')
               and a.appointmentDatetime >= :from
               and a.appointmentDatetime < :to
             """)
