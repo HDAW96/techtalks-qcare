@@ -7,6 +7,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api
 
 const TOKEN_KEY = 'qcare.token'
 
+const REQUEST_TIMEOUT_MS = 15000
+
 export function getToken() {
   try {
     return localStorage.getItem(TOKEN_KEY)
@@ -59,8 +61,14 @@ async function request(method, path, body, { auth = true } = {}) {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
+      // Without a limit, a server that accepts the connection and never
+      // answers leaves every "Saving…" button spinning forever.
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
-  } catch {
+  } catch (e) {
+    if (e?.name === 'TimeoutError') {
+      throw new ApiError('The server took too long to answer. Please try again.', 0, 'TIMEOUT')
+    }
     // fetch only rejects when the request never completed — server down,
     // DNS failure, or CORS refusing the response.
     throw new ApiError(
