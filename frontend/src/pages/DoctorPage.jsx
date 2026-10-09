@@ -252,6 +252,9 @@ function CompleteVisit({ appointment, onDone }) {
       onDone?.()
     } catch (e) {
       setError(e.message || 'Could not complete this visit. Please try again.')
+    } finally {
+      // Success too: if the card outlives the save (the refresh after it
+      // failed), the button must not stay on "Saving…".
       setSaving(false)
     }
   }
