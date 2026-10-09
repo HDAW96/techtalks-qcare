@@ -149,6 +149,9 @@ class DoctorScheduleTest {
         assertThat(now.path("patientId").asInt()).isEqualTo(walkIn.getPatientId());
         assertThat(now.path("patientName").asText()).isEqualTo("Omar Saad");
         assertThat(now.path("startedAt").isNull()).isFalse();
+        // A walk-in is a visit with no booking behind it.
+        assertThat(now.path("appointmentId").isNull()).isTrue();
+        assertThat(now.path("walkIn").asBoolean()).isTrue();
     }
 
     @Test

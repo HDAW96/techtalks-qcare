@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,6 +90,34 @@ class CheckInTest {
         Queue today = queueRepository.findByDoctorAndQueueDate(doctor, LocalDate.now()).orElseThrow();
         assertThat(linked.getStatus()).isEqualTo("WAITING");
         assertThat(linked.getQueue().getQueueId()).isEqualTo(today.getQueueId());
+    }
+
+    @Test
+    void aCheckedInBookingInTheChairIsTheDoctorsCurrentVisitWithItsAppointmentId()
+            throws Exception {
+        Appointment booking = booking("Rim Azar", "03440008", LocalDate.now());
+        checkIn(booking.getAppointmentId(), desk(), 200);
+        QueueTicket ticket = ticketRepository.findByAppointment(booking).orElseThrow();
+        ticket.setStatus("IN_CHAIR");
+        ticket.setStartedAt(java.time.LocalDateTime.now());
+        ticketRepository.save(ticket);
+
+        String doctorToken = signIn(doctor.getUser().getPhoneNumber(),
+                doctor.getUser().getFullName(), SEED_PASSWORD);
+        JsonNode current = json.readTree(mvc.perform(get("/api/doctors/me/current-visit")
+                .header("Authorization", "Bearer " + doctorToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(current.path("appointmentId").asInt()).isEqualTo(booking.getAppointmentId());
+        assertThat(current.path("ticketId").asInt()).isEqualTo(ticket.getTicketId());
+
+        // Same on the schedule.
+        JsonNode schedule = json.readTree(mvc.perform(get("/api/doctors/me/schedule")
+                .header("Authorization", "Bearer " + doctorToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(schedule.path("nowServing").path("appointmentId").asInt())
+                .isEqualTo(booking.getAppointmentId());
     }
 
     @Test
