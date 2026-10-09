@@ -1,5 +1,7 @@
 package com.example.util;
 
+import java.util.regex.Pattern;
+
 /**
  * Lebanese phone numbers arrive typed in several shapes - 03 123456,
  * +961 3 123456, 00961 3 123456. They are all the same person, so they are
@@ -8,6 +10,8 @@ package com.example.util;
  * The same rules live in the frontend so both sides agree on what a number is.
  */
 public final class PhoneNumbers {
+
+    private static final Pattern PHONE_SEARCH = Pattern.compile("[\\d\\s+()-]*\\d[\\d\\s+()-]*");
 
     private PhoneNumbers() {
     }
@@ -45,5 +49,26 @@ public final class PhoneNumbers {
      */
     public static boolean isValidLebanese(String normalised) {
         return normalised != null && normalised.matches("0[0-9]{7,8}");
+    }
+
+    /** Whether text looks like a phone number rather than a name. */
+    public static boolean isPhoneSearch(String text) {
+        return text != null && PHONE_SEARCH.matcher(text).matches();
+    }
+
+    /**
+     * Strips common formatting and maps international prefixes to local form.
+     * Unlike {@link #normalise(String)}, this preserves a partial number without
+     * adding a leading zero, so searches such as "400 001" still match.
+     */
+    public static String searchFragment(String typed) {
+        String digits = typed.replaceAll("[^0-9+]", "");
+        if (digits.startsWith("+961")) {
+            return "0" + digits.substring(4);
+        }
+        if (digits.startsWith("00961")) {
+            return "0" + digits.substring(5);
+        }
+        return digits.replace("+", "");
     }
 }
