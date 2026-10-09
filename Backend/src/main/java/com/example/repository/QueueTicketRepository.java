@@ -46,8 +46,9 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
     boolean existsByQueueAndPatientAndStatusIn(Queue queue, Patient patient, List<String> statuses);
 
     /**
-     * The tickets in one queue with a given status, patient and treatment
-     * fetched. Used for the one IN_CHAIR ticket on a doctor's schedule.
+     * The tickets in one queue with a given status, patient, treatment and
+     * any appointment fetched. Used for the one IN_CHAIR ticket on a doctor's
+     * schedule, which needs to say which booking (if any) it is.
      *
      * A List, not an Optional, for the same reason as the method below: the
      * one-chair rule is enforced in QueueService, and if bad data ever broke
@@ -58,6 +59,7 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
             select t from QueueTicket t
             join fetch t.patient
             join fetch t.medicalService
+            left join fetch t.appointment
             where t.queue = :queue
               and t.status = :status
             order by t.startedAt, t.ticketId

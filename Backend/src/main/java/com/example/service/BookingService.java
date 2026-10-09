@@ -3,6 +3,7 @@ package com.example.service;
 import com.example.dto.TreatmentCompletion;
 import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentResponse;
+import com.example.dto.CompletedVisitResponse;
 import com.example.dto.DayAvailabilityResponse;
 import com.example.dto.DeskAppointmentResponse;
 import com.example.entity.Appointment;
@@ -10,6 +11,7 @@ import com.example.entity.Doctor;
 import com.example.entity.DoctorAvailability;
 import com.example.entity.MedicalService;
 import com.example.entity.Patient;
+import com.example.entity.Queue;
 import com.example.entity.QueueTicket;
 import com.example.entity.User;
 import com.example.repository.AppointmentRepository;
@@ -470,55 +472,101 @@ public class BookingService {
     appointment.setStatus("COMPLETED");
     appointmentRepository.save(appointment);
 
-    freeTheChair(appointment, doctor);
+    freeTheChair(appointment);
 
     return AppointmentResponse.of(appointment);
 }
 
     /**
-     * Marks the queue ticket this visit was being seen on as DONE, so the
-     * chair is free for the next patient.
+     * Finishes whoever is in the signed-in doctor's chair, whether they came
+     * from a booking or walked in.
      *
-     * The ticket is found two ways because only one of them works today.
-     * Ideally a ticket is linked to its appointment, and the first branch
-     * uses that link - but nothing creates it yet: checking a booked patient
-     * in at the desk is not built, so every ticket in the database has a null
-     * appointment_id and the link is never there. Until it is, fall back to
-     * the fact that matters in the room: this doctor has one chair, and the
-     * person in it is this patient.
+     * The visit is the queue ticket, not the patient: a patient can hold
+     * several bookings today, and a walk-in has none. So this closes exactly
+     * the ticket in the chair, and its own booking if it has one. Nothing is
+     * matched on the patient, so another booking the same patient holds today
+     * stays as it was.
+     *
+     * A walk-in has no appointment row, and so nowhere to keep clinical
+     * notes: they are accepted and not stored.
+     */
+    // READ_COMMITTED with the queue lock: see QueueRepository.lockById. Two
+    // completions of the same visit run one after the other, and the second
+    // finds an empty chair.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public CompletedVisitResponse completeCurrentVisit(Integer userId, TreatmentCompletion request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                        "Please sign in again."));
+        if (!ROLE_DOCTOR.equals(user.getRole())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_A_DOCTOR",
+                    "Only doctors can complete visits.");
+        }
+        Doctor doctor = doctorRepository.findByUser(user)
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "NOT_A_DOCTOR",
+                        "Only doctors can complete visits."));
+
+        Queue queue = queueRepository.findByDoctorAndQueueDate(doctor, LocalDate.now())
+                .orElseThrow(BookingService::noCurrentVisit);
+        queueRepository.lockById(queue.getQueueId());
+
+        List<QueueTicket> inChair =
+                queueTicketRepository.findByQueueAndStatusFetched(queue, QueueService.IN_CHAIR);
+        if (inChair.isEmpty()) {
+            throw noCurrentVisit();
+        }
+        // The first one called in: the same visit the doctor's screen shows.
+        QueueTicket ticket = inChair.get(0);
+
+        // startedAt is deliberately left alone: it records when treatment began.
+        ticket.setStatus(QueueService.DONE);
+        queueTicketRepository.save(ticket);
+
+        Appointment appointment = ticket.getAppointment();
+        if (appointment != null && isOpen(appointment)) {
+            appointment.setClinicalNotes(
+                    request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim());
+            appointment.setStatus("COMPLETED");
+            appointmentRepository.save(appointment);
+        }
+        return CompletedVisitResponse.of(ticket);
+    }
+
+    private static ApiException noCurrentVisit() {
+        return new ApiException(HttpStatus.CONFLICT, "NO_CURRENT_VISIT",
+                "There is nobody in your chair to complete.");
+    }
+
+    /** A booking that is still waiting to be seen or is being seen. */
+    private static boolean isOpen(Appointment appointment) {
+        return "BOOKED".equals(appointment.getStatus())
+                || "CHECKED_IN".equals(appointment.getStatus());
+    }
+
+    /**
+     * Marks the queue ticket this appointment was checked in on as DONE, so
+     * the chair is free for the next patient.
+     *
+     * Only the ticket linked to this appointment is ever closed. It used to
+     * fall back to whoever was in the chair if they were the same patient,
+     * but a patient can hold two bookings today, or a walk-in ticket beside a
+     * booking, and completing one of them then freed the chair of another
+     * visit. A visit is identified by its own ticket, never by the patient.
      *
      * Silent when there is no such ticket, which is the ordinary case for a
-     * booked patient who never joined the walk-in queue at all. Completing
-     * the visit must not fail because there was no ticket to close.
+     * booking that was never checked in. Completing the visit must not fail
+     * because there was no ticket to close.
      *
      * startedAt is deliberately left alone. It records when the treatment
      * began, and a finished visit is exactly when that is worth keeping.
      */
-    private void freeTheChair(Appointment appointment, Doctor doctor) {
-        QueueTicket ticket = queueTicketRepository.findByAppointment(appointment)
-                .orElseGet(() -> chairTicketFor(appointment, doctor));
-        if (ticket == null || !QueueService.IN_CHAIR.equals(ticket.getStatus())) {
-            return;
-        }
-        ticket.setStatus(QueueService.DONE);
-        queueTicketRepository.save(ticket);
-    }
-
-    /**
-     * The ticket this doctor currently has in the chair, if it belongs to this
-     * appointment's patient. Looked up on the appointment's own day, because
-     * that is the day the visit happened.
-     */
-    private QueueTicket chairTicketFor(Appointment appointment, Doctor doctor) {
-        return queueRepository
-                .findByDoctorAndQueueDate(doctor, appointment.getAppointmentDatetime().toLocalDate())
-                .map(queue -> queueTicketRepository
-                        .findByQueueAndStatusFetched(queue, QueueService.IN_CHAIR).stream()
-                        .filter(t -> t.getPatient().getPatientId()
-                                .equals(appointment.getPatient().getPatientId()))
-                        .findFirst()
-                        .orElse(null))
-                .orElse(null);
+    private void freeTheChair(Appointment appointment) {
+        queueTicketRepository.findByAppointment(appointment)
+                .filter(ticket -> QueueService.IN_CHAIR.equals(ticket.getStatus()))
+                .ifPresent(ticket -> {
+                    ticket.setStatus(QueueService.DONE);
+                    queueTicketRepository.save(ticket);
+                });
     }
 
 }
