@@ -5,7 +5,9 @@ import com.example.dto.AppointmentBookingDTO;
 import com.example.dto.AppointmentRescheduleDTO;
 import com.example.dto.AppointmentResponse;
 import com.example.dto.DeskAppointmentResponse;
+import com.example.dto.QueueTicketResponse;
 import com.example.service.BookingService;
+import com.example.service.QueueService;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +28,11 @@ import java.util.List;
 public class AppointmentController {
 
     private final BookingService bookingService;
+    private final QueueService queueService;
 
-    public AppointmentController(BookingService bookingService) {
+    public AppointmentController(BookingService bookingService, QueueService queueService) {
         this.bookingService = bookingService;
+        this.queueService = queueService;
     }
 
     /** The signed-in patient's own appointments, never anyone else's. */
@@ -75,6 +79,16 @@ public class AppointmentController {
     public AppointmentResponse cancel(Authentication authentication,
             @PathVariable Integer appointmentId) {
         return bookingService.cancel(signedInUserId(authentication), appointmentId);
+    }
+
+    /**
+     * The desk checks in a patient who booked: they join today's queue for
+     * their doctor. Reception or admin only; the answer is their new ticket.
+     */
+    @PostMapping("/{appointmentId}/check-in")
+    public QueueTicketResponse checkIn(Authentication authentication,
+            @PathVariable Integer appointmentId) {
+        return queueService.checkInBooking(signedInUserId(authentication), appointmentId);
     }
 
     /**

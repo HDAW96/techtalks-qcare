@@ -15,12 +15,14 @@ import com.example.entity.MedicalService;
 import com.example.entity.Patient;
 import com.example.entity.Queue;
 import com.example.entity.QueueTicket;
+import com.example.entity.Appointment;
 import com.example.entity.Receptionist;
 import com.example.entity.User;
 import com.example.repository.DoctorAvailabilityRepository;
 import com.example.repository.DoctorRepository;
 import com.example.repository.MedicalServiceRepository;
 import com.example.repository.PatientRepository;
+import com.example.repository.AppointmentRepository;
 import com.example.repository.QueueRepository;
 import com.example.repository.QueueTicketRepository;
 import com.example.repository.ReceptionistRepository;
@@ -83,6 +85,7 @@ public class QueueService {
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
     private final QueueRepository queueRepository;
+    private final AppointmentRepository appointmentRepository;
     private final QueueTicketRepository ticketRepository;
     private final DoctorRepository doctorRepository;
     private final DoctorAvailabilityRepository availabilityRepository;
@@ -95,6 +98,7 @@ public class QueueService {
     public QueueService(QueueRepository queueRepository,
             QueueTicketRepository ticketRepository,
             DoctorRepository doctorRepository,
+            AppointmentRepository appointmentRepository,
             DoctorAvailabilityRepository availabilityRepository,
             MedicalServiceRepository serviceRepository,
             PatientRepository patientRepository,
@@ -106,6 +110,7 @@ public class QueueService {
         this.doctorRepository = doctorRepository;
         this.availabilityRepository = availabilityRepository;
         this.serviceRepository = serviceRepository;
+        this.appointmentRepository = appointmentRepository;
         this.patientRepository = patientRepository;
         this.receptionistRepository = receptionistRepository;
         this.userRepository = userRepository;
@@ -205,6 +210,67 @@ public class QueueService {
     public QueueTicketsResponse tickets(Integer queueId) {
         Queue queue = queueOrThrow(queueId);
         return new QueueTicketsResponse(queueId, LocalDateTime.now().format(CLOCK), board(queue));
+    }
+
+    /**
+     * A booked patient has arrived: give them a place in today's queue for
+     * their doctor, linked to the booking, and mark the booking CHECKED_IN.
+     * Reception or admin only.
+     *
+     * A second click on the same booking is refused twice over: the status
+     * check catches it, and if two clicks race past that together, the second
+     * waits on the queue lock and then finds the patient already has a ticket.
+     */
+    // READ_COMMITTED for the same reason as addWalkIn below.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public QueueTicketResponse checkInBooking(Integer userId, Integer appointmentId) {
+        requireDeskOrAdmin(userId);
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "APPOINTMENT_NOT_FOUND",
+                        "That appointment was not found."));
+
+        if ("CANCELLED".equals(appointment.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "APPOINTMENT_CANCELLED",
+                    "This appointment has been cancelled. Please check the patient's history.");
+        }
+        if ("CHECKED_IN".equals(appointment.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_CHECKED_IN",
+                    "This patient is already checked in.");
+        }
+        if (!"BOOKED".equals(appointment.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_CHECKABLE",
+                    "Only a booked appointment can be checked in.");
+        }
+        if (!appointment.getAppointmentDatetime().toLocalDate().equals(LocalDate.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_TODAY",
+                    "This appointment is not for today.");
+        }
+
+        Queue queue = queueRepository
+                .findByDoctorAndQueueDate(appointment.getDoctor(), LocalDate.now())
+                .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "QUEUE_NOT_OPEN",
+                        "This doctor's queue is not open today. Open it first."));
+        queueRepository.lockById(queue.getQueueId());
+        if (!OPEN.equals(queue.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "QUEUE_CLOSED",
+                    "This doctor's queue is closed. Open it again to check anyone in.");
+        }
+
+        Patient patient = appointment.getPatient();
+        requireNoActiveTicketToday(patient, patient.getFullName() + " is");
+
+        QueueTicket ticket = issueTicket(queue, patient, appointment.getMedicalService());
+        ticket.setAppointment(appointment);
+        ticketRepository.save(ticket);
+
+        appointment.setStatus("CHECKED_IN");
+        appointmentRepository.save(appointment);
+
+        String prefix = ticketPrefixes().getOrDefault(queue.getDoctor().getDoctorId(), "R");
+        return board(queue).stream()
+                .filter(row -> row.getTicketId().equals(ticket.getTicketId()))
+                .findFirst()
+                .orElseGet(() -> QueueTicketResponse.of(ticket, null, null, prefix));
     }
 
     /**
@@ -459,6 +525,18 @@ public class QueueService {
         QueueTicket ticket = new QueueTicket(queue, patient, service,
                 highest == null ? 1 : highest + 1);
         return ticketRepository.save(ticket);
+    }
+
+    /** Check-in is a desk job; an admin may stand in for the desk. */
+    private void requireDeskOrAdmin(Integer userId) {
+        String role = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                        "Please sign in again."))
+                .getRole();
+        if (!"RECEPTIONIST".equals(role) && !"ADMIN".equals(role)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_AUTHORIZED",
+                    "Only the front desk or an admin can do that.");
+        }
     }
 
     private Patient signedInPatient(Integer userId) {

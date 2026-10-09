@@ -78,7 +78,7 @@ public class DoctorScheduleDTO {
         private String patientName;
         private String service;
         private Integer minutes;
-        /** BOOKED, COMPLETED, CANCELLED or MISSED. */
+        /** BOOKED, CHECKED_IN, COMPLETED, CANCELLED or MISSED. */
         private String status;
 
         public Visit() {
