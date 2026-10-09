@@ -250,8 +250,26 @@ export function useDayAppointments(date) {
   }
 }
 
-/* Finishing a visit: marks the appointment COMPLETED, saves the doctor's
-   clinical notes, and frees the chair (SCRUM-80).
+/* Finishing the visit in the doctor's chair (POST
+   /doctors/me/current-visit/complete): a booking or a walk-in. The server
+   decides which visit that is, so nothing is sent but the notes. A booking is
+   marked COMPLETED with its notes; a walk-in has no appointment to keep notes
+   on, so only its ticket is closed. The chair is freed either way.
+
+   Not a hook, because it is a one-off action rather than something a screen
+   subscribes to. The caller reloads the schedule afterwards, so the chair and
+   the day list both come back from the server rather than being guessed at
+   here - the ticket only leaves the chair because the server said so. */
+export function completeCurrentVisit(clinicalNotes) {
+  return apiPost('/doctors/me/current-visit/complete', {
+    clinicalNotes: clinicalNotes?.trim() ? clinicalNotes.trim() : null,
+  })
+}
+
+/* Finishing one booking by its id: marks the appointment COMPLETED, saves the
+   doctor's clinical notes (SCRUM-80). It closes only that booking's own queue
+   ticket, so it is not how the visit in the chair is finished - use
+   completeCurrentVisit for that.
 
    Not a hook, because it is a one-off action rather than something a screen
    subscribes to. The caller reloads the schedule afterwards, so the chair and
