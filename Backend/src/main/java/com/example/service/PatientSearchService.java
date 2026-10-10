@@ -19,6 +19,10 @@ public class PatientSearchService {
 
     @Transactional(readOnly = true)
     public List<PatientSearchResponse> search(String search) {
+         // Return empty list if search is null or blank
+    if (search == null || search.isBlank()) {
+        return List.of();
+    }
         String text = search == null || search.isBlank() ? null : search.trim();
         if (PhoneNumbers.isPhoneSearch(text)) {
             text = PhoneNumbers.searchFragment(text);

@@ -78,8 +78,10 @@ public class SecurityConfig {
                         // rule that matches wins.
                         .requestMatchers(HttpMethod.GET, "/api/queues/join-options",
                                 "/api/queues/today/board", "/api/tickets/by-code/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/tickets/by-code/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/queues/join").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tickets/me").hasRole("PATIENT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/tickets/*").hasRole("PATIENT")
                         // Every other queue endpoint answers with patients' names
                         // and phone numbers, so being signed in is not enough -
                         // only the front desk may read or move the queue.

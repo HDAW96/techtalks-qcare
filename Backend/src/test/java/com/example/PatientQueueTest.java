@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -150,6 +151,80 @@ class PatientQueueTest {
     }
 
     @Test
+    void aPatientCanGiveUpTheirPlaceAndEveryoneBehindMovesUp() throws Exception {
+        String desk = signIn(DESK_PHONE, DESK_NAME, SEED_PASSWORD);
+        int doctorId = today(desk).path("doctors").get(0).path("doctorId").asInt();
+        open(desk, doctorId);
+        String patient = registerPatient("Lina Haddad", "03555333", "A-long-password1");
+        JsonNode ownTicket = read(join(patient, sign(LocalDate.now()), doctorId, null, null)
+                .andExpect(status().isCreated()));
+        JsonNode nextTicket = read(join(null, sign(LocalDate.now()), doctorId, "Rima Nassar", "03555444")
+                .andExpect(status().isCreated()));
+        String nextAccessCode = nextTicket.path("accessCode").asText();
+
+        mvc.perform(get("/api/tickets/by-code/" + nextAccessCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.position").value(1));
+
+        mvc.perform(delete("/api/tickets/" + ownTicket.path("ticketId").asInt())
+                        .header("Authorization", bearer(patient)))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/tickets/me").header("Authorization", bearer(patient)))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/tickets/by-code/" + nextAccessCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.position").value(0));
+
+        mvc.perform(delete("/api/tickets/by-code/" + nextAccessCode))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/tickets/by-code/" + nextAccessCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SKIPPED"))
+                .andExpect(jsonPath("$.position").doesNotExist());
+    }
+
+    @Test
+    void aPatientCannotGiveUpSomeoneElsesPlace() throws Exception {
+        String desk = signIn(DESK_PHONE, DESK_NAME, SEED_PASSWORD);
+        int doctorId = today(desk).path("doctors").get(0).path("doctorId").asInt();
+        open(desk, doctorId);
+        String owner = registerPatient("Lina Haddad", "03555333", "A-long-password1");
+        String otherPatient = registerPatient("Rima Nassar", "03555444", "A-long-password2");
+        JsonNode ticket = read(join(owner, sign(LocalDate.now()), doctorId, null, null)
+                .andExpect(status().isCreated()));
+
+        mvc.perform(delete("/api/tickets/" + ticket.path("ticketId").asInt())
+                        .header("Authorization", bearer(otherPatient)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("NOT_YOUR_TICKET"));
+        mvc.perform(get("/api/tickets/me").header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WAITING"));
+    }
+
+    @Test
+    void aPatientAlreadyInTheChairCannotGiveUpTheirPlace() throws Exception {
+        String desk = signIn(DESK_PHONE, DESK_NAME, SEED_PASSWORD);
+        int doctorId = today(desk).path("doctors").get(0).path("doctorId").asInt();
+        open(desk, doctorId);
+        String patient = registerPatient("Lina Haddad", "03555333", "A-long-password1");
+        JsonNode ticket = read(join(patient, sign(LocalDate.now()), doctorId, null, null)
+                .andExpect(status().isCreated()));
+        int queueId = queueOf(desk, 0);
+
+        mvc.perform(patch("/api/queues/" + queueId + "/tickets/" + ticket.path("ticketId").asInt())
+                        .header("Authorization", bearer(desk))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IN_CHAIR\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(delete("/api/tickets/" + ticket.path("ticketId").asInt())
+                        .header("Authorization", bearer(patient)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CANNOT_LEAVE_QUEUE"));
+    }
+
+    @Test
     void aSignedInPatientJoinsAsThemselvesAndSeesTheirOwnTicket() throws Exception {
         String desk = signIn(DESK_PHONE, DESK_NAME, SEED_PASSWORD);
         int doctorId = today(desk).path("doctors").get(0).path("doctorId").asInt();
@@ -266,6 +341,15 @@ class PatientQueueTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"doctorId\":" + doctorId + "}"))
                 .andExpect(status().isCreated());
+    }
+
+    private String registerPatient(String fullName, String phoneNumber, String password) throws Exception {
+        mvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "fullName", fullName, "phoneNumber", phoneNumber, "password", password))))
+                .andExpect(status().isCreated());
+        return signIn(phoneNumber, fullName, password);
     }
 
     private JsonNode today(String desk) throws Exception {
