@@ -19,11 +19,8 @@ public class PatientSearchController {
         this.patientSearchService = patientSearchService;
     }
 
-     public List<PatientSearchResponse> search(@RequestParam(required = false) String search) {
-        return patientSearchService.search(search);
-    }
      @GetMapping
-    public List<PatientSearchResponse> search(@RequestParam(required = false) String search) {
+     public List<PatientSearchResponse> search(@RequestParam(required = false) String search) {
         return patientSearchService.search(search);
     }
 }
