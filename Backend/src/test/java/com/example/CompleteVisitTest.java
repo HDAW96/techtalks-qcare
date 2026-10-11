@@ -183,7 +183,7 @@ class CompleteVisitTest {
         assertThat(current.path("walkIn").asBoolean()).isTrue();
         assertThat(current.path("patientId").asInt()).isEqualTo(walkIn.getPatientId());
 
-        JsonNode done = completeCurrent(token, "{\"clinicalNotes\":\"Check-up.\"}", 200);
+        JsonNode done = completeCurrent(token, "{\"clinicalNotes\":null}", 200);
         assertThat(done.path("status").asText()).isEqualTo("COMPLETED");
         assertThat(done.path("ticketId").asInt()).isEqualTo(ticket.getTicketId());
         assertThat(done.path("appointmentId").isNull()).isTrue();
@@ -197,6 +197,41 @@ class CompleteVisitTest {
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
         assertThat(schedule(token).path("nowServing").isNull()).isTrue();
+    }
+
+    @Test
+    void aWalkInCompletionWithNotesIsRefusedRatherThanLosingTheNotes() throws Exception {
+        Patient walkIn = patientRepository.save(new Patient("Wael Nasr", "03880107"));
+        QueueTicket ticket = callIn(walkIn, null);
+        String token = signInAsDoctor();
+
+        JsonNode refused = completeCurrent(token, "{\"clinicalNotes\":\"Check-up.\"}", 400);
+        assertThat(refused.path("error").asText()).isEqualTo("WALK_IN_NOTES_NOT_SAVED");
+        // Nothing changed: the walk-in is still in the chair.
+        assertThat(ticketRepository.findById(ticket.getTicketId()).orElseThrow().getStatus())
+                .isEqualTo("IN_CHAIR");
+
+        // Blank notes are no notes.
+        completeCurrent(token, "{\"clinicalNotes\":\"   \"}", 200);
+        assertThat(ticketRepository.findById(ticket.getTicketId()).orElseThrow().getStatus())
+                .isEqualTo("DONE");
+    }
+
+    @Test
+    void completingACheckedInBookingByIdAlsoClosesItsWaitingTicket() throws Exception {
+        Patient patient = patientRepository.save(new Patient("Tarek Issa", "03880108"));
+        Appointment booking = appointmentRepository.save(new Appointment(patient, doctor,
+                LocalDate.now().atTime(LocalTime.of(11, 0)), service));
+        queue();
+        checkIn(booking.getAppointmentId());
+        QueueTicket ticket = ticketRepository.findByAppointment(booking).orElseThrow();
+        // Checked in but not called in yet.
+        assertThat(ticket.getStatus()).isEqualTo("WAITING");
+
+        complete(booking.getAppointmentId(), signInAsDoctor(), "{\"clinicalNotes\":null}", 200);
+
+        assertThat(ticketRepository.findById(ticket.getTicketId()).orElseThrow().getStatus())
+                .isEqualTo("DONE");
     }
 
     @Test
