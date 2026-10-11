@@ -488,7 +488,9 @@ public class BookingService {
      * stays as it was.
      *
      * A walk-in has no appointment row, and so nowhere to keep clinical
-     * notes: they are accepted and not stored.
+     * notes. Notes sent for a walk-in are therefore refused with 400
+     * WALK_IN_NOTES_NOT_SAVED rather than accepted and dropped, so a doctor is
+     * never told a visit was saved when what they wrote was not.
      */
     // READ_COMMITTED with the queue lock: see QueueRepository.lockById. Two
     // completions of the same visit run one after the other, and the second
@@ -518,14 +520,20 @@ public class BookingService {
         // The first one called in: the same visit the doctor's screen shows.
         QueueTicket ticket = inChair.get(0);
 
+        String notes = request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim();
+        if (ticket.getAppointment() == null && notes != null && !notes.isEmpty()) {
+            // Checked before anything is changed: the visit stays in the chair.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "WALK_IN_NOTES_NOT_SAVED",
+                    "Notes cannot be saved for a walk-in. Finish the visit without notes.");
+        }
+
         // startedAt is deliberately left alone: it records when treatment began.
         ticket.setStatus(QueueService.DONE);
         queueTicketRepository.save(ticket);
 
         Appointment appointment = ticket.getAppointment();
         if (appointment != null && isOpen(appointment)) {
-            appointment.setClinicalNotes(
-                    request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim());
+            appointment.setClinicalNotes(notes);
             appointment.setStatus("COMPLETED");
             appointmentRepository.save(appointment);
         }
@@ -545,7 +553,9 @@ public class BookingService {
 
     /**
      * Marks the queue ticket this appointment was checked in on as DONE, so
-     * the chair is free for the next patient.
+     * the chair is free for the next patient. A ticket still WAITING is closed
+     * too: a booking that is completed by id before the desk called it in must
+     * not leave a ticket in the line that could be called in again.
      *
      * Only the ticket linked to this appointment is ever closed. It used to
      * fall back to whoever was in the chair if they were the same patient,
@@ -562,7 +572,8 @@ public class BookingService {
      */
     private void freeTheChair(Appointment appointment) {
         queueTicketRepository.findByAppointment(appointment)
-                .filter(ticket -> QueueService.IN_CHAIR.equals(ticket.getStatus()))
+                .filter(ticket -> QueueService.IN_CHAIR.equals(ticket.getStatus())
+                        || QueueService.WAITING.equals(ticket.getStatus()))
                 .ifPresent(ticket -> {
                     ticket.setStatus(QueueService.DONE);
                     queueTicketRepository.save(ticket);

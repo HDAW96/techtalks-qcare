@@ -199,7 +199,7 @@ function Chair({ chair, now, onDone }) {
               patientName={chair.patientName ?? ''}
               className="btn btn--live"
             />
-            <CompleteVisit onDone={onDone} />
+            <CompleteVisit walkIn={chair.walkIn === true} onDone={onDone} />
           </div>
         </div>
       </div>
@@ -216,8 +216,12 @@ function Chair({ chair, now, onDone }) {
    patient should not have to type to close a visit.
 
    Shown for whoever is in the chair, booking or walk-in: the server finishes
-   the visit in the chair, so nothing here says which booking it is. */
-function CompleteVisit({ onDone }) {
+   the visit in the chair, so nothing here says which booking it is.
+
+   A walk-in has no appointment to keep notes on, so the notes box is not
+   offered for one - and the server refuses notes sent for a walk-in - rather
+   than let a doctor type notes that would be thrown away. */
+function CompleteVisit({ walkIn, onDone }) {
   const [open, setOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -228,7 +232,7 @@ function CompleteVisit({ onDone }) {
     setSaving(true)
     setError(null)
     try {
-      await completeCurrentVisit(notes)
+      await completeCurrentVisit(walkIn ? null : notes)
       setOpen(false)
       setNotes('')
       // The chair empties because the server said so, not because this
@@ -253,19 +257,25 @@ function CompleteVisit({ onDone }) {
 
   return (
     <div className="dr-complete">
-      <label className="cell__label" htmlFor="dr-notes">
-        Clinical notes <span className="cell__optional">optional</span>
-      </label>
-      <textarea
-        id="dr-notes"
-        className="cell__input dr-complete__notes"
-        rows={3}
-        maxLength={2000}
-        placeholder="What was done, and anything the next visit should know."
-        value={notes}
-        disabled={saving}
-        onChange={(e) => setNotes(e.target.value)}
-      />
+      {walkIn ? (
+        <p className="meta dr-chair__walkin">Notes are not saved for walk-ins.</p>
+      ) : (
+        <>
+          <label className="cell__label" htmlFor="dr-notes">
+            Clinical notes <span className="cell__optional">optional</span>
+          </label>
+          <textarea
+            id="dr-notes"
+            className="cell__input dr-complete__notes"
+            rows={3}
+            maxLength={2000}
+            placeholder="What was done, and anything the next visit should know."
+            value={notes}
+            disabled={saving}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </>
+      )}
       {error && (
         <p className="form-error" role="alert">
           {error}
