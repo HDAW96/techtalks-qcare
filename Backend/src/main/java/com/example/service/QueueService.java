@@ -489,13 +489,19 @@ public class QueueService {
     }
 
     private void leaveWaitingTicket(QueueTicket ticket) {
-        if (!WAITING.equals(ticket.getStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CANNOT_LEAVE_QUEUE",
-                    "Only a patient who is still waiting can give up their place.");
-        }
-        ticket.setStatus(SKIPPED);
-        ticketRepository.save(ticket);
+    if (!WAITING.equals(ticket.getStatus())) {
+        throw new ApiException(HttpStatus.CONFLICT, "CANNOT_LEAVE_QUEUE",
+                "Only a patient who is still waiting can give up their place.");
     }
+
+    if (ticket.getAppointment() != null && "CHECKED_IN".equals(ticket.getAppointment().getStatus())) {
+                        ticket.getAppointment().setStatus("BOOKED");
+                        appointmentRepository.save(ticket.getAppointment());
+                    }
+                
+    ticket.setStatus(SKIPPED);
+    ticketRepository.save(ticket);
+        }
 
     private static ApiException ticketNotFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "TICKET_NOT_FOUND",
