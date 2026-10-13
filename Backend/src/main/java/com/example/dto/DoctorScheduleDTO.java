@@ -132,6 +132,13 @@ public class DoctorScheduleDTO {
                 DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
         private Integer ticketId;
+        /**
+         * The booking this visit is, when the patient was checked in from one.
+         * Null for a walk-in. The ticket is the visit; this only says which
+         * booking it came from, so a screen never has to guess it from the
+         * patient (who may hold several bookings on the same day).
+         */
+        private Integer appointmentId;
         /** Already formatted for display, e.g. "K-14" for Dr Karim. */
         private String ticket;
         private Integer patientId;
@@ -144,9 +151,12 @@ public class DoctorScheduleDTO {
         public NowServing() {
         }
 
-        static NowServing of(QueueTicket ticket, String prefix) {
+        public static NowServing of(QueueTicket ticket, String prefix) {
             NowServing now = new NowServing();
             now.ticketId = ticket.getTicketId();
+            now.appointmentId = ticket.getAppointment() == null
+                    ? null
+                    : ticket.getAppointment().getAppointmentId();
             now.ticket = prefix + "-" + ticket.getTicketNumber();
             now.patientId = ticket.getPatient().getPatientId();
             now.patientName = ticket.getPatient().getFullName();
@@ -160,6 +170,15 @@ public class DoctorScheduleDTO {
 
         public Integer getTicketId() {
             return ticketId;
+        }
+
+        public Integer getAppointmentId() {
+            return appointmentId;
+        }
+
+        /** True when there is no booking behind this visit. */
+        public boolean isWalkIn() {
+            return appointmentId == null;
         }
 
         public String getTicket() {

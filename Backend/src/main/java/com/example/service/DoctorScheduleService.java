@@ -85,7 +85,25 @@ public class DoctorScheduleService {
     }
 
     /**
-     * Whoever the desk has called into this doctor's chair, or null.
+     * The visit in the signed-in doctor's chair right now, or null when the
+     * chair is empty. A checked-in booking and a walk-in are both visits, so
+     * either may be returned; appointmentId says which it is.
+     *
+     * The same lookup as the schedule's nowServing, so the two cannot name
+     * different visits.
+     */
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Transactional(readOnly = true)
+    public DoctorScheduleDTO.NowServing currentVisit(Integer userId) {
+        Doctor doctor = doctorOf(userId);
+        QueueTicket ticket = inChair(doctor, LocalDate.now());
+        return ticket == null ? null
+                : DoctorScheduleDTO.NowServing.of(ticket, queueService.ticketPrefixFor(doctor));
+    }
+
+    /**
+     * Whoever the desk has called into this doctor's chair, or null. The
+     * first one called in, if bad data ever put two there.
      *
      * No queue open today simply means an empty chair, not an error: a doctor
      * seeing only booked patients never has one.

@@ -2,7 +2,10 @@ package com.example.controller;
 
 import com.example.dto.DoctorLeaveDTO;
 import com.example.dto.DoctorLeaveResponse;
+import com.example.dto.CompletedVisitResponse;
 import com.example.dto.DoctorScheduleDTO;
+import com.example.dto.TreatmentCompletion;
+import com.example.service.BookingService;
 import com.example.service.DoctorScheduleService;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -27,15 +30,40 @@ import java.util.List;
 public class DoctorScheduleController {
 
     private final DoctorScheduleService scheduleService;
+    private final BookingService bookingService;
 
-    public DoctorScheduleController(DoctorScheduleService scheduleService) {
+    public DoctorScheduleController(DoctorScheduleService scheduleService,
+            BookingService bookingService) {
         this.scheduleService = scheduleService;
+        this.bookingService = bookingService;
     }
 
     /** Today's appointments for this doctor, plus whoever is in their chair. */
     @GetMapping("/schedule")
     public DoctorScheduleDTO schedule(Authentication authentication) {
         return scheduleService.todaysSchedule(signedInUserId(authentication));
+    }
+
+    /**
+     * The visit in this doctor's chair - a checked-in booking or a walk-in -
+     * or 204 when the chair is empty. appointmentId is null for a walk-in.
+     */
+    @GetMapping("/current-visit")
+    public ResponseEntity<DoctorScheduleDTO.NowServing> currentVisit(Authentication authentication) {
+        DoctorScheduleDTO.NowServing visit =
+                scheduleService.currentVisit(signedInUserId(authentication));
+        return visit == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(visit);
+    }
+
+    /**
+     * Finishes the visit in this doctor's chair and frees the chair. Works for
+     * a walk-in as well as a booking, and closes only that visit: another
+     * booking the same patient holds today is left as it was.
+     */
+    @PostMapping("/current-visit/complete")
+    public CompletedVisitResponse completeCurrentVisit(Authentication authentication,
+            @RequestBody TreatmentCompletion request) {
+        return bookingService.completeCurrentVisit(signedInUserId(authentication), request);
     }
 
     /**
