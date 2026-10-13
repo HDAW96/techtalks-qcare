@@ -108,4 +108,5 @@ async function request(method, path, body, { auth = true } = {}) {
 export const apiGet = (path) => request('GET', path)
 export const apiPost = (path, body, options) => request('POST', path, body, options)
 export const apiPatch = (path, body) => request('PATCH', path, body)
+export const apiPut = (path, body) => request('PUT', path, body)
 export const apiDelete = (path) => request('DELETE', path)
