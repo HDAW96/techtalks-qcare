@@ -6,6 +6,7 @@ import Legend from '../components/Legend'
 import QueueDesk from '../components/QueueDesk'
 import QrCode from '../components/QrCode'
 import WalkInForm from '../components/WalkInForm'
+import PatientSearch from '../components/PatientSearch'
 import DeskAppointments from '../components/DeskAppointments'
 import { useBookingOptions, useDeskQueue, useTodaysDoctors } from '../data/hooks'
 import { clinic } from '../data/mock'
@@ -34,6 +35,7 @@ function ReceptionPage() {
   const queue = useDeskQueue(doctor?.queue?.queueId ?? null)
 
   const [addingWalkIn, setAddingWalkIn] = useState(false)
+  const [searching, setSearching] = useState(false)
   /* What the server refused, shown above the board. A rejected move is the
      normal way two receptionists on two screens find out about each other -
      the chair was taken while this screen still showed it free - so it is a
@@ -236,7 +238,12 @@ function ReceptionPage() {
                     <button type="button" className="btn" disabled title="Not built yet">
                       Check in booked patient
                     </button>
-                    <button type="button" className="btn btn--quiet" disabled title="Not built yet">
+                    <button
+                      type="button"
+                      className="btn btn--quiet"
+                      aria-expanded={searching}
+                      onClick={() => setSearching((open) => !open)}
+                    >
                       Find patient
                     </button>
                     <button
@@ -247,6 +254,9 @@ function ReceptionPage() {
                       Close queue
                     </button>
                   </div>
+                )}
+                {searching && selectedOpen && !addingWalkIn && (
+                  <PatientSearch onClose={() => setSearching(false)} />
                 )}
               </>
             )}
