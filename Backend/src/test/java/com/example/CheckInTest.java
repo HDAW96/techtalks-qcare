@@ -192,4 +192,45 @@ class CheckInTest {
                 .andReturn().getResponse().getContentAsString();
         return json.readTree(response).path("token").asText();
     }
+     //for registred patient
+    private Appointment bookingForRegistredPatient(Patient patient, LocalDate day) {
+    queueRepository.findByDoctorAndQueueDate(doctor, LocalDate.now())
+            .orElseGet(() -> queueRepository.save(
+                    new Queue(doctor, null, LocalDate.now())));
+
+    return appointmentRepository.save(
+            new Appointment(patient, doctor,
+                    day.atTime(LocalTime.of(11, 0)), service));
+   }
+   
+    @Test
+    void leavingQueueAfterCheckInReturnsAppointmentToBooked() throws Exception {
+    String patientToken = registerAndSignIn("sara yousef", "03400012");
+
+    Patient patient = patientRepository
+        .findByPhoneNumberAndFullName("03400012", "sara yousef")
+        .orElseThrow();
+
+    Appointment booking = bookingForRegistredPatient( patient, LocalDate.now());
+        
+    JsonNode ticket = checkIn(booking.getAppointmentId(), desk(), 200);
+        
+    QueueTicket linkedTicket = ticketRepository
+            .findByAppointment(booking)
+            .orElseThrow();
+
+    mvc.perform(delete("/api/tickets/" + linkedTicket.getTicketId())
+            .header("Authorization", "Bearer " + patientToken))
+            .andExpect(status().isNoContent());  
+
+    QueueTicket refreshedTicket = ticketRepository.findById(linkedTicket.getTicketId()).orElseThrow();
+    
+     assertThat(refreshedTicket.getStatus()).isEqualTo("SKIPPED");
+
+    Appointment afterBooking = appointmentRepository
+            .findById(booking.getAppointmentId())
+            .orElseThrow();
+
+    assertThat(afterBooking.getStatus()).isEqualTo("BOOKED");
+    }
 }
