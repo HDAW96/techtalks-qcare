@@ -115,7 +115,7 @@ function DeskAppointments({ openQueues = '', onCheckedIn }) {
     .filter(Boolean).join(' ')
 
   return (
-    <div className="sheet">
+    <div className="sheet desk-appts">
       <div className="sheet__head desk-appts__head">
         <div>
           <p className="dash__name">Appointments</p>
@@ -197,23 +197,25 @@ function DeskAppointments({ openQueues = '', onCheckedIn }) {
                       <td>{a.service} <span className="meta">· {a.minutes} min</span></td>
                       <td><Mark status={STATUS_MARK[a.status]} label={DESK_LABEL[a.status] ?? a.status} /></td>
                       <td className="desk__right">
-                        {/* Only today's bookings can join today's queue; the
-                            server refuses any other, so the button is not shown. */}
-                        {a.status === APPOINTMENT_STATUS.BOOKED && day === today && (
-                          <button
-                            type="button"
-                            className="btn btn--sm btn--live"
-                            disabled={checkingId != null}
-                            onClick={() => checkInPatient(a)}
-                          >
-                            {checkingId === a.id ? 'Checking in…' : 'Check in'}
-                          </button>
-                        )}{' '}
-                        {a.status === APPOINTMENT_STATUS.BOOKED && (
-                          <button type="button" className="btn btn--sm" onClick={() => update({ move: String(a.id) })}>
-                            Reschedule
-                          </button>
-                        )}
+                        <div className="desk__acts">
+                          {/* Only today's bookings can join today's queue; the
+                              server refuses any other, so the button is not shown. */}
+                          {a.status === APPOINTMENT_STATUS.BOOKED && day === today && (
+                            <button
+                              type="button"
+                              className="btn btn--sm btn--live"
+                              disabled={checkingId != null}
+                              onClick={() => checkInPatient(a)}
+                            >
+                              {checkingId === a.id ? 'Checking in…' : 'Check in'}
+                            </button>
+                          )}
+                          {a.status === APPOINTMENT_STATUS.BOOKED && (
+                            <button type="button" className="btn btn--sm" onClick={() => update({ move: String(a.id) })}>
+                              Reschedule
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

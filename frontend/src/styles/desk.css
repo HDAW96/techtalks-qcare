@@ -96,4 +96,7 @@
    of the 24px .stack gap on the patient dashboard, and pushed the footer's
    address and opening hours away from the clinic name they belong to. */
 .desk-cols .sheet { margin-bottom: 50px; }
+/* The appointments sheet sits below .desk-cols, as the last thing before
+   the footer, so it needs the same room under it. */
+.desk-appts { margin-bottom: 50px; }
 .desk-cols .sheet__head .meta { margin-top: 20px; }
