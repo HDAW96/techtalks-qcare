@@ -384,4 +384,35 @@ class PatientQueueTest {
         byte[] raw = mac.doFinal(("clinic-queue|" + date).getBytes(StandardCharsets.UTF_8));
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
     }
+    @Test 
+     void guestGiveUpByCode() throws Exception {
+       String sig = sign(LocalDate.now());
+       String desk = signIn(DESK_PHONE, DESK_NAME, SEED_PASSWORD);
+        open(desk,1);
+      ResultActions joinAction = join( null, sig, 1, "Guest Name", "09990007");
+
+      MvcResult joinResult = joinAction.andReturn();
+
+      assertEquals(201, joinResult.getResponse().getStatus());
+
+        String body = joinResult.getResponse().getContentAsString();
+        String accessCode = json.readTree(body).path("accessCode").asText();
+
+      //gives 204
+      mvc.perform(delete("/api/tickets/by-code/" + accessCode))
+        .andExpect(status().isNoContent());
+
+      // CANNOT_LEAVE_QUEUE 409
+       mvc.perform(delete("/api/tickets/by-code/" + accessCode))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error").value("CANNOT_LEAVE_QUEUE"));
+   
+      //TICKET_NOT_FOUNd 404
+      String fakeCode = "NON_EXISTENT_CODE_12345";
+
+        mvc.perform(delete("/api/tickets/by-code/" + fakeCode))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error").value("TICKET_NOT_FOUND"));
+  }
+
 }
