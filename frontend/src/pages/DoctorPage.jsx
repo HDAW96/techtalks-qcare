@@ -20,10 +20,16 @@ import '../styles/doctor.css'
 
 const DAY_LABEL = {
   [APPOINTMENT_STATUS.BOOKED]: 'Booked',
+  [APPOINTMENT_STATUS.CHECKED_IN]: 'Checked in',
   [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
   [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
   [APPOINTMENT_STATUS.MISSED]: 'Missed',
 }
+
+/* A visit still to come: booked, or booked and already checked in at the
+   desk. Checking in does not close a booking. */
+const isOpen = (a) =>
+  a.status === APPOINTMENT_STATUS.BOOKED || a.status === APPOINTMENT_STATUS.CHECKED_IN
 
 /* The wall clock, re-read every half minute: enough for "12 min in the
    chair" and for the now-line on the day list, without re-rendering every
@@ -360,7 +366,7 @@ function DayList({ appointments, chair, now, date }) {
   const isToday = date === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const nowTime = clock(now)
 
-  const booked = sorted.filter((a) => a.status === APPOINTMENT_STATUS.BOOKED)
+  const booked = sorted.filter(isOpen)
   const done = sorted.filter((a) => a.status === APPOINTMENT_STATUS.COMPLETED).length
   const cancelled = sorted.filter((a) => a.status === APPOINTMENT_STATUS.CANCELLED).length
 
@@ -415,7 +421,7 @@ function DayList({ appointments, chair, now, date }) {
               // of the same patient.
               const inChair = chair?.appointmentId != null && a.appointmentId === chair.appointmentId
               const isNext = next != null && a.appointmentId === next.appointmentId
-              const closed = !inChair && a.status !== APPOINTMENT_STATUS.BOOKED
+              const closed = !inChair && !isOpen(a)
               const className = [
                 'dr-row',
                 inChair && 'dr-row--live',
