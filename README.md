@@ -35,6 +35,11 @@
 | **Mohammed Itani** | Backend Developer |
 | **Mohammed Dakdouk** | Frontend Developer |
 
+## How we merge
+
+No pull request is merged without **one approval from someone other than its
+author**.
+
 ## Running it locally
 
 ### What you need first
@@ -94,8 +99,19 @@ cd Backend
 ./mvnw spring-boot:run
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+cd Backend
+.\mvnw.cmd spring-boot:run
+```
+
 Starts on **http://localhost:8080**. On first run it creates the nine tables and
 adds the clinic's doctors and treatments, so there is something to book.
+
+**If it stops at startup** with `Communications link failure` or
+`Unable to determine Dialect`, MySQL is not running. Start the MySQL service
+(on Windows: Services → MySQL → Start) and run the backend again.
 
 ### 5. Run the frontend
 
