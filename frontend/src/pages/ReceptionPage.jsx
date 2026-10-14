@@ -73,6 +73,7 @@ function ReceptionPage() {
   // One clinic QR per day. Nothing to join until a queue is open.
   const anyQueueOpen = doctors.some((d) => d.queue?.status === 'OPEN')
   const selectedOpen = doctor?.queue?.status === 'OPEN'
+  const openQueues = doctors.filter((d) => d.queue?.status === 'OPEN').map((d) => d.doctorId).join(',')
 
   /* Closing stops new joins, by QR and at the desk; people already in the
      line can still be called in and finished. */
@@ -232,12 +233,6 @@ function ReceptionPage() {
                     >
                       Add walk-in
                     </button>
-                    {/* Not built yet. Shown disabled rather than hidden so the
-                        desk knows the work exists and is coming, and cannot
-                        press something that would silently do nothing. */}
-                    <button type="button" className="btn" disabled title="Not built yet">
-                      Check in booked patient
-                    </button>
                     <button
                       type="button"
                       className="btn btn--quiet"
@@ -273,7 +268,7 @@ function ReceptionPage() {
 
         </div>
 
-        <DeskAppointments />
+        <DeskAppointments openQueues={openQueues} onCheckedIn={queue.reload} />
       </main>
 
       <SiteFooter />

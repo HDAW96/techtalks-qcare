@@ -7,7 +7,8 @@ import { useDayAppointments } from '../data/hooks'
 import { formatDay, formatRecordNumber, formatTime } from '../data/format'
 import { APPOINTMENT_STATUS, STATUS_MARK } from '../constants'
 
-/* The clinic's booked appointments for one day, and moving any of them.
+/* The clinic's booked appointments for one day, moving any of them, and
+   checking in today's (SCRUM-105).
 
    Real data, not sample: reception may see and move every patient's
    appointment, and the server checks that on every call. The day shown and
@@ -16,6 +17,7 @@ import { APPOINTMENT_STATUS, STATUS_MARK } from '../constants'
 
 const DESK_LABEL = {
   [APPOINTMENT_STATUS.BOOKED]: 'Booked',
+  [APPOINTMENT_STATUS.CHECKED_IN]: 'Checked in',
   [APPOINTMENT_STATUS.COMPLETED]: 'Completed',
   [APPOINTMENT_STATUS.CANCELLED]: 'Cancelled',
   [APPOINTMENT_STATUS.MISSED]: 'Missed',
@@ -34,21 +36,31 @@ function shiftDay(date, days) {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
 }
 
-function DeskAppointments() {
+/* `openQueues` names the queues open right now; a refusal given under other
+   ones (say "queue not open", before the desk opened it) is no longer true,
+   so it stops being shown. `onCheckedIn` lets the page refresh its board. */
+function DeskAppointments({ openQueues = '', onCheckedIn }) {
   const [params, setParams] = useSearchParams()
   const today = localToday()
   const day = /^\d{4}-\d{2}-\d{2}$/.test(params.get('day') ?? '') ? params.get('day') : today
   const moveId = Number(params.get('move')) || null
 
-  const { items, loading, error, reschedule } = useDayAppointments(day)
+  const { items, loading, error, reschedule, checkIn } = useDayAppointments(day)
   const [scrollRef, edges] = useSideScroll()
   // The appointment just moved. It may now be on another day, so it is kept
   // from the server's answer rather than looked up in this day's list.
   const [justMoved, setJustMoved] = useState(null)
+  // The last check-in: who, and the ticket the server gave them; or why it
+  // was refused. One at a time, like `justMoved`.
+  const [checkedIn, setCheckedIn] = useState(null)
+  const [checkInError, setCheckInError] = useState(null)
+  const [checkingId, setCheckingId] = useState(null)
 
   /* Changes only this section's keys, so the chosen doctor stays chosen. */
   const update = (changes) => {
     setJustMoved(null)
+    setCheckedIn(null)
+    setCheckInError(null)
     setParams((p) => {
       const next = new URLSearchParams(p)
       Object.entries(changes).forEach(([k, v]) => (v == null ? next.delete(k) : next.set(k, v)))
@@ -58,6 +70,27 @@ function DeskAppointments() {
 
   // Only a booked appointment can be moved; the server says the same.
   const moving = items.find((a) => a.id === moveId && a.status === APPOINTMENT_STATUS.BOOKED)
+
+  /* The server says why a check-in is refused (queue not open, already in
+     the queue...) in words meant for the desk, so they are shown as they are. */
+  const checkInPatient = async (a) => {
+    setJustMoved(null)
+    setCheckedIn(null)
+    setCheckInError(null)
+    setCheckingId(a.id)
+    try {
+      const ticket = await checkIn(a.id)
+      setCheckedIn({ patientName: a.patientName, doctor: a.doctor, ticket: ticket?.ticket })
+      onCheckedIn?.()
+    } catch (err) {
+      setCheckInError({
+        text: `${a.patientName} was not checked in. ${err.message || 'Please try again.'}`,
+        openQueues,
+      })
+    } finally {
+      setCheckingId(null)
+    }
+  }
 
   if (moving) {
     return (
@@ -114,6 +147,18 @@ function DeskAppointments() {
         </div>
       )}
 
+      {checkedIn && (
+        <div className="sheet__body" role="status" style={{ paddingBlock: 16 }}>
+          <p>
+            {checkedIn.patientName} checked in
+            {checkedIn.ticket ? `, ticket ${checkedIn.ticket}` : ''}. They are now in {checkedIn.doctor}&rsquo;s queue.
+          </p>
+        </div>
+      )}
+      {checkInError && checkInError.openQueues === openQueues && (
+        <p className="form-error desk-error" role="alert">{checkInError.text}</p>
+      )}
+
       {error && (
         <div className="empty" role="alert"><p>{errorMessage(error)}</p></div>
       )}
@@ -152,6 +197,18 @@ function DeskAppointments() {
                       <td>{a.service} <span className="meta">· {a.minutes} min</span></td>
                       <td><Mark status={STATUS_MARK[a.status]} label={DESK_LABEL[a.status] ?? a.status} /></td>
                       <td className="desk__right">
+                        {/* Only today's bookings can join today's queue; the
+                            server refuses any other, so the button is not shown. */}
+                        {a.status === APPOINTMENT_STATUS.BOOKED && day === today && (
+                          <button
+                            type="button"
+                            className="btn btn--sm btn--live"
+                            disabled={checkingId != null}
+                            onClick={() => checkInPatient(a)}
+                          >
+                            {checkingId === a.id ? 'Checking in…' : 'Check in'}
+                          </button>
+                        )}{' '}
                         {a.status === APPOINTMENT_STATUS.BOOKED && (
                           <button type="button" className="btn btn--sm" onClick={() => update({ move: String(a.id) })}>
                             Reschedule

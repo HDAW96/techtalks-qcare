@@ -239,6 +239,15 @@ export function useDayAppointments(date) {
     return moved
   }, [])
 
+  /* Checking in a booked patient for today (SCRUM-99): the server marks the
+     booking CHECKED_IN and puts them in their doctor's queue. Answers with the
+     new ticket. */
+  const checkIn = useCallback(async (id) => {
+    const ticket = await apiPost(`/appointments/${id}/check-in`)
+    setReloads((n) => n + 1)
+    return ticket
+  }, [])
+
   // A refetch of the same day keeps its rows on screen until the new ones arrive.
   const sameDay = result.key?.startsWith(`${date}:`)
   return {
@@ -247,6 +256,7 @@ export function useDayAppointments(date) {
     error: sameDay ? result.error : null,
     reload,
     reschedule,
+    checkIn,
   }
 }
 
@@ -574,10 +584,13 @@ export function useDeskQueue(queueId) {
       chairTaken: entries.some((e) => e.status === TICKET_STATUS.IN_CHAIR),
       setStatus,
       addWalkIn,
+      // Asks again now rather than at the next poll: a booking checked in
+      // from the appointments list should be on the board at once.
+      reload: bump,
       // Derived, not stored: a queue is loading exactly while it has neither
       // an answer nor a failure of its own yet.
       loading: queueId != null && current == null,
       error: current?.error ?? null,
     }
-  }, [current, queueId, setStatus, addWalkIn])
+  }, [current, queueId, setStatus, addWalkIn, bump])
 }
