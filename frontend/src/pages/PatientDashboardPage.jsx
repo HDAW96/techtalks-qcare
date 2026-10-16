@@ -474,7 +474,7 @@ function PatientDashboardPage() {
                     <>
                       <Legend items={['live', 'wait']} />
                       <div className="sheet__body" style={{ paddingBlock: 16 }}>
-                        <QueueBoard entries={boardEntries(myQueue.entries, hasLeft ? null : yourTicket.ticket)} />
+                        <QueueBoard entries={boardEntries(myQueue.entries, yourTicket.ticket, hasLeft)} />
                       </div>
                     </>
                   )}

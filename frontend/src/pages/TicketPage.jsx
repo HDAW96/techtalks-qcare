@@ -73,7 +73,7 @@ function TicketPage() {
             </div>
             <Legend items={['live', 'wait']} />
             <div className="sheet__body" style={{ paddingBlock: 16 }}>
-              <QueueBoard entries={boardEntries(myQueue.entries, hasLeft ? null : ticket.ticket)} />
+              <QueueBoard entries={boardEntries(myQueue.entries, ticket.ticket, hasLeft)} />
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { leaveTicket } from './ticketActions'
+import { hasLeftQueue, leaveTicket } from './ticketActions'
+import { boardEntries } from './hooks'
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', {
@@ -89,5 +90,45 @@ describe('give up my place (SCRUM-110)', () => {
 
     await expect(leaveTicket({ code: 'guest-code' }, 17))
       .rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+  })
+})
+
+describe('the "Left queue" receipt (SCRUM-110)', () => {
+  const departure = { path: '/tickets/me', ticket: { ticketId: 17 } }
+
+  it('holds once the server has no ticket any more', () => {
+    expect(hasLeftQueue(departure, '/tickets/me', null)).toBe(true)
+  })
+
+  it('holds while the same ticket shows as SKIPPED', () => {
+    expect(hasLeftQueue(departure, '/tickets/me', { ticketId: 17, status: 'SKIPPED' })).toBe(true)
+  })
+
+  it('drops when a newer ticket replaces it', () => {
+    expect(hasLeftQueue(departure, '/tickets/me', { ticketId: 18, status: 'WAITING' })).toBe(false)
+  })
+
+  it('is not proven by SKIPPED on a different ticket', () => {
+    expect(hasLeftQueue(departure, '/tickets/me', { ticketId: 18, status: 'SKIPPED' })).toBe(false)
+  })
+
+  it('drops when another source is shown, or there is no receipt', () => {
+    expect(hasLeftQueue(departure, '/tickets/by-code/x', null)).toBe(false)
+    expect(hasLeftQueue(null, '/tickets/me', null)).toBe(false)
+  })
+})
+
+describe('the line after leaving', () => {
+  const entries = [
+    { ticket: 'R-1', status: 'WAITING', etaMinutes: 0 },
+    { ticket: 'R-2', status: 'WAITING', etaMinutes: 20 },
+  ]
+
+  it('marks your own ticket while you wait', () => {
+    expect(boardEntries(entries, 'R-2').map((e) => [e.ticket, e.you])).toEqual([['R-1', false], ['R-2', true]])
+  })
+
+  it('no longer lists you once you have left', () => {
+    expect(boardEntries(entries, 'R-2', true).map((e) => e.ticket)).toEqual(['R-1'])
   })
 })

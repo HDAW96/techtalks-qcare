@@ -3,6 +3,12 @@ import Mark from './Mark'
 import { STATUS_MARK, TICKET_STATUS } from '../constants'
 import { waitLabel } from '../data/hooks'
 
+/* One patient's own ticket: their number, where they stand, and what to do.
+   The same card on the ticket page and the patient dashboard, so the wording
+   never differs between them. Reads a /tickets/me or /tickets/by-code answer.
+   `onLeave` adds "Give up my place" (with a confirm step) while they wait;
+   `hasLeft` shows the receipt after they did. */
+
 function aheadOfYou(count) {
   if (count === 0) return 'Nobody ahead of you'
   if (count === 1) return 'One person ahead of you'

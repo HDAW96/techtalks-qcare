@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notifications as sampleNotifications } from './mock'
 import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
-import { leaveTicket } from './ticketActions'
+import { hasLeftQueue, leaveTicket } from './ticketActions'
 
 /* The one place screens get clinic data from.
 
@@ -110,10 +110,7 @@ export function useMyTicket(source) {
   // receipt instead of immediately removing the ticket card.
   // SKIPPED by itself is not proof that the patient chose to leave.
   const sameDeparture = departure?.path === path
-  const hasLeft = Boolean(sameDeparture && (!data || (
-    data.ticketId === departure.ticket.ticketId &&
-    data.status === TICKET_STATUS.SKIPPED
-  )))
+  const hasLeft = hasLeftQueue(departure, path, data)
 
   // Reset only when a different source or newer ticket state supersedes
   // this receipt. The guarded reset settles on the next render.
@@ -184,12 +181,14 @@ export function joinQueue(details) {
 
 /* A ticket as the patient-facing QueueBoard draws it: the ticket number and
    a wait. `yours` marks the viewer's own ticket; nobody else is named. */
-export function boardEntries(entries, yours) {
-  return entries.map((e) => ({
+export function boardEntries(entries, yours, hasLeft = false) {
+  // Someone who just left no longer stands in the line they are looking at.
+  const shown = hasLeft && yours != null ? entries.filter((e) => e.ticket !== yours) : entries
+  return shown.map((e) => ({
     ticket: e.ticket,
     status: e.status,
     eta: e.status === TICKET_STATUS.IN_CHAIR ? 'now' : waitLabel(e.etaMinutes),
-    you: yours != null && e.ticket === yours,
+    you: !hasLeft && yours != null && e.ticket === yours,
   }))
 }
 
