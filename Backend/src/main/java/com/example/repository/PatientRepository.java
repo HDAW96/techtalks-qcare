@@ -25,8 +25,7 @@ public interface PatientRepository extends JpaRepository<Patient, Integer> {
      */
     @Query("""
     SELECT p FROM Patient p
-    WHERE :search IS NULL
-       OR LOWER(p.fullName) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '!'
+    WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '!'
        OR p.phoneNumber LIKE CONCAT('%', :search, '%') ESCAPE '!'
     ORDER BY LOWER(p.fullName), p.patientId
     """)

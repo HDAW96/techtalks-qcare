@@ -455,6 +455,59 @@ public class QueueService {
                 .map(ticket -> patientView(ticket, false));
     }
 
+    /** Leaves the signed-in patient's own place in today's queue. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void leaveQueue(Integer userId, Integer ticketId) {
+        Patient patient = signedInPatient(userId);
+        Integer queueId = ticketRepository.findQueueIdByTicketId(ticketId)
+                .orElseThrow(QueueService::ticketNotFound);
+        queueRepository.lockById(queueId);
+        QueueTicket ticket = ticketRepository.findById(ticketId)
+                .filter(t -> t.getQueue().getQueueId().equals(queueId))
+                .orElseThrow(QueueService::ticketNotFound);
+        if (!ticket.getQueue().getQueueDate().equals(LocalDate.now())) {
+            throw ticketNotFound();
+        }
+        if (!ticket.getPatient().getPatientId().equals(patient.getPatientId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_YOUR_TICKET",
+                    "You can only give up your own place.");
+        }
+        leaveWaitingTicket(ticket);
+    }
+
+    /** Leaves a walk-in's place when they prove they hold its access code. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void leaveQueueByCode(String accessCode) {
+        Integer queueId = ticketRepository.findQueueIdByAccessCode(accessCode)
+                .orElseThrow(QueueService::ticketNotFound);
+        queueRepository.lockById(queueId);
+        QueueTicket ticket = ticketRepository.findByAccessCode(accessCode)
+                .filter(t -> t.getQueue().getQueueId().equals(queueId)
+                        && t.getQueue().getQueueDate().equals(LocalDate.now()))
+                .orElseThrow(QueueService::ticketNotFound);
+        leaveWaitingTicket(ticket);
+    }
+
+    private void leaveWaitingTicket(QueueTicket ticket) {
+    if (!WAITING.equals(ticket.getStatus())) {
+        throw new ApiException(HttpStatus.CONFLICT, "CANNOT_LEAVE_QUEUE",
+                "Only a patient who is still waiting can give up their place.");
+    }
+
+    if (ticket.getAppointment() != null && "CHECKED_IN".equals(ticket.getAppointment().getStatus())) {
+                        ticket.getAppointment().setStatus("BOOKED");
+                        appointmentRepository.save(ticket.getAppointment());
+                    }
+                
+    ticket.setStatus(SKIPPED);
+    ticketRepository.save(ticket);
+        }
+
+    private static ApiException ticketNotFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "TICKET_NOT_FOUND",
+                "That ticket was not found in today's queue.");
+    }
+
     /**
      * A ticket found by its access code, for patients without an account.
      * Only today's: yesterday's code left in a browser means nothing today.

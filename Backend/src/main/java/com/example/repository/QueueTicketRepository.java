@@ -70,6 +70,12 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
     /** How a patient without an account finds their own ticket again. */
     Optional<QueueTicket> findByAccessCode(String accessCode);
 
+    @Query("select t.queue.queueId from QueueTicket t where t.ticketId = :ticketId")
+    Optional<Integer> findQueueIdByTicketId(@Param("ticketId") Integer ticketId);
+
+    @Query("select t.queue.queueId from QueueTicket t where t.accessCode = :accessCode")
+    Optional<Integer> findQueueIdByAccessCode(@Param("accessCode") String accessCode);
+
     Optional<QueueTicket> findByAppointment(Appointment appointment);
 
     /**
