@@ -63,7 +63,8 @@ class PatientSearchTest {
         assertThat(names(search(receptionist, "SCRUM96 Order")))
                 .containsExactly("SCRUM96 Order Alpha", "SCRUM96 Order Maya", "SCRUM96 Order Zebra");
 
-        List<String> allNames = names(search(receptionist, null));
+        List<String> allNames = names(search(receptionist, "SCRUM96"));
+        assertThat(allNames).hasSizeGreaterThan(1);
         List<String> sortedNames = new ArrayList<>(allNames);
         sortedNames.sort(String.CASE_INSENSITIVE_ORDER);
         assertThat(allNames).isEqualTo(sortedNames);
