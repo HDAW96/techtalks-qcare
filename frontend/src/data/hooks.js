@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notifications as sampleNotifications } from './mock'
 import { apiGet, apiPatch, apiPost } from '../api/client'
 import { APPOINTMENT_STATUS, TICKET_STATUS } from '../constants'
+import { leaveTicket } from './ticketActions'
 
 /* The one place screens get clinic data from.
 
@@ -45,18 +46,21 @@ function useEveryFewSeconds(onTick, enabled = true) {
 function usePolled(path) {
   const [result, setResult] = useState({ key: null, data: null, error: null })
   const [tick, setTick] = useState(0)
+  const revision = useRef(0)
   const bump = useCallback(() => setTick((n) => n + 1), [])
   useEveryFewSeconds(bump, Boolean(path))
 
   useEffect(() => {
     if (!path) return undefined
     let cancelled = false
+    const requestedRevision = revision.current
+    const isCurrent = () => !cancelled && requestedRevision === revision.current
     apiGet(path)
       .then((data) => {
-        if (!cancelled) setResult({ key: path, data, error: null })
+        if (isCurrent()) setResult({ key: path, data, error: null })
       })
       .catch((error) => {
-        if (cancelled) return
+        if (!isCurrent()) return
         setResult((prev) => ({ key: path, data: prev.key === path ? prev.data : null, error }))
       })
     return () => {
@@ -65,12 +69,18 @@ function usePolled(path) {
   }, [path, tick])
 
   const reload = useCallback(() => setTick((n) => n + 1), [])
+  // Invalidate GETs that started before a successful mutation.
+  const replaceData = useCallback((data) => {
+    revision.current += 1
+    setResult({ key: path, data, error: null })
+  }, [path])
   const current = result.key === path
   return {
     data: current ? result.data : null,
     error: current ? result.error : null,
     loading: Boolean(path) && !current,
     reload,
+    replaceData,
   }
 }
 
@@ -92,8 +102,65 @@ export function useMyTicket(source) {
     : source?.code
       ? `/tickets/by-code/${encodeURIComponent(source.code)}`
       : null
-  const { data, error, loading } = usePolled(path)
-  return { ticket: data, error, loading }
+
+  const { data, error, loading, reload, replaceData } = usePolled(path)
+  const [departure, setDeparture] = useState(null)
+
+  // /tickets/me returns 204 after leaving. Keep this screen's confirmed
+  // receipt instead of immediately removing the ticket card.
+  // SKIPPED by itself is not proof that the patient chose to leave.
+  const sameDeparture = departure?.path === path
+  const hasLeft = Boolean(sameDeparture && (!data || (
+    data.ticketId === departure.ticket.ticketId &&
+    data.status === TICKET_STATUS.SKIPPED
+  )))
+
+  // Reset only when a different source or newer ticket state supersedes
+  // this receipt. The guarded reset settles on the next render.
+  if (departure && (!sameDeparture || (data && !hasLeft))) {
+    setDeparture(null)
+  }
+
+  const leave = useCallback(async (ticketId) => {
+    if (
+      !data ||
+      data.ticketId !== ticketId ||
+      data.status !== TICKET_STATUS.WAITING
+    ) {
+      throw new Error(
+        'Your ticket has changed. Please check its current status.',
+      )
+    }
+
+    try {
+      await leaveTicket(source, ticketId)
+    } catch (error) {
+      // Reception may have called this patient in during confirmation.
+      reload()
+      throw error
+    }
+
+    setDeparture({
+      path,
+      ticket: {
+        ...data,
+        status: TICKET_STATUS.SKIPPED,
+        position: null,
+        etaMinutes: null,
+      },
+    })
+
+    replaceData(null)
+    reload()
+  }, [data, source, path, replaceData, reload])
+
+  return {
+    ticket: hasLeft ? departure.ticket : data,
+    error,
+    loading,
+    leave,
+    hasLeft,
+  }
 }
 
 /* GET /api/queues/join-options: the doctors a patient can choose after
