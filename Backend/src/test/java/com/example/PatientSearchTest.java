@@ -136,5 +136,17 @@ class PatientSearchTest {
         assertThat(search(token, "")).isEmpty();
         assertThat(search(token, "   ")).isEmpty();
       }
+     
+    @Test
+    void trimmedSearchQueryFindsPatientsCorrectly() throws Exception {
+    savePatient("SCRUM96 Trim Match", "03790020");
+    String receptionist = signIn("03400009", "Reception Desk One", SEED_PASSWORD);
+
+    for (String paddedQuery : List.of("  SCRUM96 Trim Match  ", "\tSCRUM96 Trim Match\t", " SCRUM96 Trim Match ")) {
+        assertThat(names(search(receptionist, paddedQuery)))
+                .as("Searching with padded query: '%s'", paddedQuery)
+                .contains("SCRUM96 Trim Match");
+    }
+   }
 
 }
