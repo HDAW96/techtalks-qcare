@@ -23,7 +23,7 @@ public class PatientSearchService {
     if (search == null || search.isBlank()) {
         return List.of();
     }
-         String text=search;
+         String text = search.trim();
         if (PhoneNumbers.isPhoneSearch(text)) {
             text = PhoneNumbers.searchFragment(text);
         }
