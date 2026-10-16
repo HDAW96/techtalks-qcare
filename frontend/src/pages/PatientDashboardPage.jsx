@@ -168,7 +168,7 @@ function PatientDashboardPage() {
   
   const { user, signOut } = useAuth()
   // Their real ticket today, if any, and their doctor's line (numbers only).
-  const { ticket: yourTicket } = useMyTicket({ me: true })
+  const { ticket: yourTicket, leave, hasLeft } = useMyTicket({ me: true })
   const { queues } = usePublicBoard()
   const myQueue = yourTicket ? queues.find((q) => q.doctorName === yourTicket.doctorName) : null
   const appointments = useAppointments()
@@ -354,11 +354,11 @@ function PatientDashboardPage() {
                 <SheetHead
                   title="Your queue ticket"
                   note={`${clinic.name} · updates every 15 seconds`}
-                  right={yourTicket ? 'Live' : undefined}
+                  right={yourTicket && !hasLeft ? 'Live' : undefined}
                 />
                 {yourTicket ? (
                   <>
-                    <TicketCard ticket={yourTicket} />
+                    <TicketCard key={yourTicket.ticketId} ticket={yourTicket} onLeave={leave} hasLeft={hasLeft} />
                     <div className="sheet__foot">
                       <button type="button" className="btn btn--quiet" onClick={() => open('ticket')}>
                         See the whole line
@@ -465,28 +465,19 @@ function PatientDashboardPage() {
               <SheetHead
                 title="Walk-in queue"
                 note={`${clinic.name} · updates every 15 seconds`}
-                right={yourTicket ? 'Live' : undefined}
+                right={yourTicket && !hasLeft ? 'Live' : undefined}
               />
               {yourTicket ? (
                 <>
-                  <TicketCard ticket={yourTicket} />
+                  <TicketCard key={yourTicket.ticketId} ticket={yourTicket} onLeave={leave} hasLeft={hasLeft} />
                   {myQueue && myQueue.entries.length > 0 && (
                     <>
                       <Legend items={['live', 'wait']} />
                       <div className="sheet__body" style={{ paddingBlock: 16 }}>
-                        <QueueBoard entries={boardEntries(myQueue.entries, yourTicket.ticket)} />
+                        <QueueBoard entries={boardEntries(myQueue.entries, hasLeft ? null : yourTicket.ticket)} />
                       </div>
                     </>
                   )}
-                  <div className="sheet__foot">
-                    {/* Leaving the queue needs the patient ticket endpoints
-                        (SCRUM-56). Shown disabled rather than hidden, like the
-                        desk's unfinished buttons, so it cannot silently do
-                        nothing. */}
-                    <button type="button" className="btn btn--quiet" disabled title="Not built yet">
-                      Give up my place
-                    </button>
-                  </div>
                 </>
               ) : (
                 <NoTicket />

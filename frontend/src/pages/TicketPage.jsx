@@ -20,7 +20,7 @@ function TicketPage() {
   const code = readTicketCode()
   const source = sessionLoading ? null : signedInPatient ? { me: true } : code ? { code } : null
 
-  const { ticket, error, loading } = useMyTicket(source)
+  const { ticket, error, loading, leave, hasLeft } = useMyTicket(source)
   const { queues } = usePublicBoard()
   const myQueue = ticket ? queues.find((q) => q.doctorName === ticket.doctorName) : null
 
@@ -41,7 +41,7 @@ function TicketPage() {
               <p className="dash__name">Your queue ticket</p>
               <p className="meta">{clinic.name} · updates every 15 seconds</p>
             </div>
-            {ticket && <p className="meta meta--right" style={{ color: 'var(--live)' }}>Live</p>}
+            {ticket && !hasLeft && <p className="meta meta--right" style={{ color: 'var(--live)' }}>Live</p>}
           </div>
 
           {(sessionLoading || (source && loading)) && (
@@ -63,7 +63,7 @@ function TicketPage() {
             </div>
           )}
 
-          {ticket && <TicketCard ticket={ticket} />}
+          {ticket && <TicketCard key={ticket.ticketId} ticket={ticket} onLeave={leave} hasLeft={hasLeft} />}
         </div>
 
         {ticket && myQueue && myQueue.entries.length > 0 && (
@@ -73,7 +73,7 @@ function TicketPage() {
             </div>
             <Legend items={['live', 'wait']} />
             <div className="sheet__body" style={{ paddingBlock: 16 }}>
-              <QueueBoard entries={boardEntries(myQueue.entries, ticket.ticket)} />
+              <QueueBoard entries={boardEntries(myQueue.entries, hasLeft ? null : ticket.ticket)} />
             </div>
           </div>
         )}
