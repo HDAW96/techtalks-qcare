@@ -658,6 +658,18 @@
   color: var(--ink);
 }
 
+/* Give up my place: the leave button, then the confirm step. */
+.ticket-card__leave {
+  margin-top: var(--s3);
+}
+
+.ticket-card__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+
 @media (max-width: 560px) {
   .ticket-card {
     grid-template-columns: 1fr;

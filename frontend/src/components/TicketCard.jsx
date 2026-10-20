@@ -111,10 +111,7 @@ function TicketCard({ ticket, onLeave, hasLeft = false }) {
         )}
 
         {canLeave && (
-          <div
-            className="stack"
-            style={{ gap: 'var(--s3)', marginTop: 'var(--s3)' }}
-          >
+          <div className="ticket-card__leave">
             {!confirming ? (
               <div>
                 <button
@@ -139,14 +136,7 @@ function TicketCard({ ticket, onLeave, hasLeft = false }) {
                   place in the queue.
                 </p>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 'var(--s3)',
-                    marginTop: 'var(--s3)',
-                  }}
-                >
+                <div className="ticket-card__confirm-actions">
                   <button
                     type="button"
                     className="btn"
