@@ -15,7 +15,7 @@
 | Category | Features / Details |
 | :--- | :--- |
 | **In Scope** | Online booking, QR walk-in queue, patient check-in, live position/ETA tracking, simple receptionist dashboard. |
-| **Out of Scope** | WhatsApp/SMS reminders, in-app payments, advanced analytics, staff scheduling, offline sync logic. |
+| **Out of Scope** | WhatsApp/SMS reminders, in-app payments, advanced analytics, staff scheduling, offline sync logic, arabic interface. |
 | **Current Status** | Approved (TechTalks Internship 2026). Development in final stages. |
 
 ## Tech Stack
