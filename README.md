@@ -15,7 +15,8 @@
 | Category | Features / Details |
 | :--- | :--- |
 | **In Scope** | Online booking, QR walk-in queue, patient check-in, live position/ETA tracking, simple receptionist dashboard. |
-| **Out of Scope** | WhatsApp/SMS reminders, in-app payments, advanced analytics, staff scheduling, offline sync logic, arabic interface. |
+| **Also built** | Doctor dashboard with clinical notes and patient history; an admin area to manage staff accounts and treatments; a clinic analytics dashboard for any date range: appointments (completed, cancelled, no-show, upcoming), walk-ins, average wait, patients per doctor, busiest treatments and busiest hours. |
+| **Out of Scope** | WhatsApp/SMS reminders, in-app payments, staff scheduling, offline sync logic, arabic interface. |
 | **Current Status** | Approved (TechTalks Internship 2026). Development in final stages. |
 
 ## Tech Stack
@@ -32,8 +33,12 @@
 | **Hadi Abdulhakim Awad** | Team Leader & Fullstack Developer|
 | **Jouri Said** | Backend Developer |
 | **Hassan El Hussein** | Fullstack Developer |
-| **Mohammed Itani** | Backend Developer |
-| **Mohammed Dakdouk** | Frontend Developer |
+| **Mohamad Itani** | Backend Developer |
+| **Mohammad Dakdouk** | Frontend Developer |
+
+## Live demo
+
+Link will be added after deployment.
 
 ## How we merge
 
@@ -92,6 +97,9 @@ Open a new terminal afterwards, or the variable will not be visible yet.
 > Without this the backend stops at startup with
 > `Access denied for user 'root'@'localhost'`.
 
+That is the only setting a laptop needs. Everything else has a local default;
+see [Configuration](#configuration).
+
 ### 4. Run the backend
 
 ```bash
@@ -106,8 +114,12 @@ cd Backend
 .\mvnw.cmd spring-boot:run
 ```
 
-Starts on **http://localhost:8080**. On first run it creates the nine tables and
-adds the clinic's doctors and treatments, so there is something to book.
+Starts on **http://localhost:8080**. On first run it creates the tables and
+adds the clinic's treatments, doctors, receptionists and an admin, so there is
+something to book and someone to sign in as (see
+[Seeded accounts](#seeded-accounts)).
+
+It logs one warning about development defaults. That is expected on a laptop.
 
 **If it stops at startup** with `Communications link failure` or
 `Unable to determine Dialect`, MySQL is not running. Start the MySQL service
@@ -167,25 +179,6 @@ VITE_USE_MOCK_AUTH=true npm run dev
 Signs in locally with sample data and accepts any password. Useful for working
 on a screen's appearance; nothing is saved anywhere.
 
-## What currently works
-
-| Area | Status |
-| :--- | :--- |
-| Register, sign in, session | Real — phone number + full name + password (at least 8 characters, with an uppercase letter, a lowercase letter and a special character) |
-| Doctors and treatments | Real — from the database |
-| Free times and booking | Real — the server works out the slots |
-| A patient's appointments | Real — including reschedule and cancel |
-| Reception: a day's appointments | Real — list any day, reschedule any appointment |
-| The desk's walk-in queue | Real — open, close and reopen a queue, add walk-ins, call in, skip, finish; live position and wait time; refreshes itself every 15 seconds |
-| Receptionist sign-in and dashboard | Real — the same sign-in form, at `/reception` |
-| Joining the queue by QR (`/join`) | Real — the desk shows a signed daily QR code; a patient picks an open doctor and a treatment and joins, with or without an account; one ticket per person per day |
-| A patient's own ticket (`/ticket`, and the dashboard) | Real — number, people ahead, wait, now serving; refreshes every 15 seconds and at once when the phone is unlocked |
-| Public queue board (home page) | Real — ticket numbers and waits only, no names |
-| Notifications | **Sample data** — no table exists in the ERD yet |
-| Profile | Read-only — name and phone number are changed at the desk |
-| Check in booked patient / Find patient / Give up my place | Shown disabled — not built yet |
-| Doctor screens | Not built |
-
 ### Scanning the QR code with a real phone
 
 The QR code links to `QCARE_FRONTEND_URL` (default `http://localhost:5173`),
@@ -201,25 +194,163 @@ $env:VITE_API_BASE_URL = 'http://192.168.1.20:8080/api'
 npm run dev -- --host
 ```
 
-### Signing in as the receptionist
+If the phone still cannot open the page, Windows Firewall may be blocking
+ports 5173 and 8080 on a network marked "Public".
+
+## What currently works
+
+**Done** means built end to end, backend and screen. **Partial** means it works
+with a limit, given in the notes. **Not built** means it does not exist yet.
+
+### Patient
+
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| Register and sign in | Done | Phone number + full name + password (at least 8 characters, with an uppercase letter, a lowercase letter and a special character). A family can share one phone. |
+| Book an appointment | Done | Pick a doctor, a treatment and a free time; the server works out the slots |
+| Reschedule and cancel | Done | |
+| My appointments | Done | On the dashboard |
+| Join the queue by QR (`/join`) | Done | Pick an open doctor and a treatment; with or without an account; one ticket per person per day |
+| Live ticket (`/ticket`, and the dashboard) | Done | Number, people ahead, wait, now serving; refreshes every 15 seconds and at once when the phone is unlocked |
+| Give up my place | Done | Leaves the queue after a confirmation |
+| Profile | Done | Read-only; name and phone number are changed at the desk |
+| Notifications | Not built | The dashboard shows sample notifications; there is no notifications table yet |
+
+### Receptionist (`/reception`)
+
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| Front desk | Done | A day's appointments and the walk-in queues on one screen |
+| Open, close and reopen a queue | Done | One queue per doctor per day; shows the signed daily QR code |
+| Add walk-ins | Done | |
+| Check in a booked patient | Done | Puts them in their doctor's queue, linked to the booking |
+| Find patient | Done | By name or phone number, in any common Lebanese format |
+| Call in, skip, finish | Done | One patient in the chair per doctor; the server decides the order |
+| Reschedule any appointment | Done | Any day, any patient |
+
+### Doctor (`/doctor`)
+
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| Dashboard | Done | Today's appointments, the patient in the chair and the waiting line (ticket numbers only) |
+| Patient in the chair | Done | Booking or walk-in |
+| Patient history | Done | Past completed visits with the doctor's notes |
+| Complete visit with notes | Done | Notes are optional; only doctors can read them |
+| Walk-in visits | Partial | A walk-in can be completed, but notes cannot be saved for it and it does not appear in patient history, because it has no appointment |
+| Time off | Partial | The server blocks the days and stops them being booked (`/api/doctors/me/leave`), but there is no screen for it yet |
+
+### Admin (`/admin`)
+
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| Manage users | Done | Add, edit and remove staff accounts. Removing deactivates the account rather than deleting it, so its history stays |
+| Manage services | Done | Add, edit, deactivate and delete treatments. One already used by an appointment or a queue ticket can only be deactivated |
+| Analytics dashboard | Partial | Works for any date range. A booking is counted as a no-show once its time has passed unless it was completed or cancelled, so a patient who is checked in and still waiting after their booked time counts as a no-show |
+| Subscriptions and Reports | Not built | Left out of the admin sidebar until they are built |
+
+### Everyone
+
+| Feature | Status | Notes |
+| :--- | :--- | :--- |
+| Public queue board (home page) | Done | Ticket numbers and waits only, no names |
+| Change password | Done | From the footer ("Change password") |
+| Forced first-time password change | Done | Accounts created by the seeder or by an admin must choose their own password at first sign-in. The server enforces it, not only the screen |
+
+## Seeded accounts
 
 There is one sign-in form for everyone. The role on the account decides where
-it takes you: a patient lands on their record, a receptionist lands on the
-front desk at `/reception`.
+it takes you: a patient lands on their record, a receptionist on the front desk
+at `/reception`, a doctor on `/doctor` and an admin on `/admin`.
 
-Registering online always creates a patient, so a desk account cannot be made
-through the app. The seeder creates two, and unlike the doctors it checks for
-them separately - a database that already has doctors would otherwise skip
-them:
+Registering online always creates a patient. Staff accounts are made by an
+admin under **Manage users**, or by the seeder on first run. The seeder creates
+these:
 
-| Phone | Full name | Password |
+| Role | Phone | Full name |
 | :--- | :--- | :--- |
-| `03400009` | `Reception Desk One` | `Changeme123!` |
-| `03400010` | `Reception Desk Two` | `changeme123` |
+| Admin | `03400011` | `Admin One` |
+| Doctor | `03400001` | `Dr. Rania Haddad` |
+| Doctor | `03400002` | `Dr. Karim Fares` |
+| Receptionist | `03400009` | `Reception Desk One` |
+| Receptionist | `03400010` | `Reception Desk Two` |
 
-That is a development password on a development database. Both are flagged
-`must_change_password`, so **the first sign-in on the website asks you to
-choose your own password** before the desk opens. After that, sign in with the
-password you chose. `changeme123` keeps working through the API until then,
-which is what the automated tests use. Anyone signed in can change their
-password again from the footer ("Change password").
+All of them start with the password set in `QCARE_SEED_PASSWORD`. On a laptop
+that is not set, so the password is **`changeme123`** — for local development
+only.
+
+Every seeded account must **choose its own password at first sign-in**. The
+website takes you straight to that screen, and the server enforces it too:
+until the password is changed, every request other than restoring the session
+and changing the password is refused with `403 PASSWORD_CHANGE_REQUIRED`. After
+that, sign in with the password you chose.
+
+Each block is added only if the database has none of that role yet, so an
+existing database keeps the accounts and passwords it already has.
+
+## Configuration
+
+Everything is set through environment variables. Only `QCARE_DB_PASSWORD` is
+needed on a laptop; a deployed server needs every variable marked "Yes".
+
+| Variable | What it does | Required in production | Local default |
+| :--- | :--- | :--- | :--- |
+| `QCARE_DB_USER` | MySQL user name | Recommended | `root` |
+| `QCARE_DB_PASSWORD` | MySQL password | Yes | none — must be set |
+| `SPRING_DATASOURCE_URL` | Full JDBC address of the database. Overrides the one in `application.properties` without a code change | Yes, unless MySQL is on the same machine | `jdbc:mysql://localhost:3306/qcare_db?...` |
+| `QCARE_JWT_SECRET` | Signs sign-in tokens. At least 32 characters | Yes | a public development value |
+| `QCARE_QR_SECRET` | Signs the clinic's daily QR code | Yes | a public development value |
+| `QCARE_SEED_PASSWORD` | Password the seeder gives the staff accounts it creates | Yes | `changeme123` |
+| `QCARE_ENV` | Set to `production` on a deployed server to turn on the startup check (see [Security](#security)) | Yes | not set |
+| `QCARE_FRONTEND_URL` | Where the QR code's link points: the frontend's address | Yes | `http://localhost:5173` |
+| `QCARE_CORS_ORIGINS` | Which frontend addresses may call the API, comma-separated | Yes | `http://localhost:5173` |
+| `QCARE_SHOW_SQL` | `true` prints every SQL query to the log, for debugging | No | `false` |
+| `VITE_API_BASE_URL` | Frontend: where the API is. Read when the frontend is built | Yes | `http://localhost:8080/api` |
+| `VITE_USE_MOCK_AUTH` | Frontend: `true` signs in with sample data and no backend | No — never in production | not set |
+
+## Security
+
+* **Passwords** are stored as BCrypt hashes, never as text.
+* **Sign-in** returns a signed JWT that the browser sends with every request.
+  Each request re-reads the account, so deactivating an account locks it out at
+  once. Tokens expire after 12 hours.
+* **Role-based access**: patients, receptionists, doctors and admins each reach
+  only their own endpoints, checked on the server.
+* **Signed daily QR codes**: the clinic QR carries a signature for that day, so
+  an old or edited code cannot be used to join a queue.
+* **Clinical notes are for doctors only.** Patients do not see them in their
+  own appointments, and receptionists cannot reach patient history.
+* **The public queue board shows ticket numbers only**, never names.
+* **Accounts are deactivated, not deleted**, so history stays intact and a
+  removed account can no longer sign in.
+* **Forced password change** for seeded and admin-created accounts, enforced by
+  the server.
+* **Secrets live only in environment variables.** The repository holds
+  development defaults only.
+* **Production startup check**: with `QCARE_ENV=production`, the backend
+  refuses to start while `QCARE_JWT_SECRET`, `QCARE_QR_SECRET` or
+  `QCARE_SEED_PASSWORD` still has its development default, and names the
+  variable to set. Anywhere else it logs one warning instead.
+
+## Testing
+
+**Backend** — 114 tests, against an in-memory database, so MySQL does not need
+to be running:
+
+```bash
+cd Backend
+./mvnw test
+```
+
+**Windows (PowerShell):** `.\mvnw.cmd test`
+
+**Frontend** — 27 tests:
+
+```bash
+cd frontend
+npm test
+```
+
+CI runs on every pull request and on `main` after a merge. It runs the backend
+tests, and the frontend lint and build (`npm run lint`, `npm run build`). The
+frontend tests are not part of CI yet, so run `npm test` yourself before
+opening a pull request.

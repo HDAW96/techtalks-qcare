@@ -6,6 +6,7 @@ import {
   getToken,
   setToken,
   setUnauthorizedHandler,
+  setPasswordChangeRequiredHandler,
 } from '../api/client'
 import { AuthContext } from './context'
 import { normalisePhone } from '../phone'
@@ -128,6 +129,15 @@ export function AuthProvider({ children }) {
       setUser(null)
     })
     return () => setUnauthorizedHandler(null)
+  }, [])
+
+  /* The server says this account must choose a new password first (an admin
+     reset it mid-session). RequireAuth then sends the user to that screen. */
+  useEffect(() => {
+    setPasswordChangeRequiredHandler(() => {
+      setUser((u) => (u && !u.mustChangePassword ? { ...u, mustChangePassword: true } : u))
+    })
+    return () => setPasswordChangeRequiredHandler(null)
   }, [])
 
   /* Phone number and full name together, because a family shares one phone:

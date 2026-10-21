@@ -1,0 +1,17 @@
+# One identity per person in `git shortlog -sne`, `git log --use-mailmap`
+# and `git blame`. Format: Canonical Name <canonical@email> [Commit Name] <commit@email>
+# A line with only the canonical name and email renames every commit made
+# with that email, whatever name it was made under.
+
+Hadi Awad <111877802+HDAW96@users.noreply.github.com>
+Hadi Awad <111877802+HDAW96@users.noreply.github.com> <hadi.a.awad@88gmail.com>
+Hadi Awad <111877802+HDAW96@users.noreply.github.com> <hadi.a.awad88@gmail.com>
+
+Hassan El Hussein <hassanelhussein2090@gmail.com>
+
+Mohamad Itani <mhmaditani008@gmail.com>
+Mohamad Itani <mhmaditani008@gmail.com> <mhmditani008@gmail.com>
+
+Jouri Said <jouri.saidd@gmail.com>
+
+Mohammad Dakdouk <mohammaddakdoukk@gmail.com>
