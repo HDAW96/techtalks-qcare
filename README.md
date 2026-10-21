@@ -16,12 +16,12 @@
 | :--- | :--- |
 | **In Scope** | Online booking, QR walk-in queue, patient check-in, live position/ETA tracking, simple receptionist dashboard. |
 | **Out of Scope** | WhatsApp/SMS reminders, in-app payments, advanced analytics, staff scheduling, offline sync logic. |
-| **Current Status** | Approved with Conditions (TechTalks Internship 2026)[cite: 7]. Development ongoing. |
+| **Current Status** | Approved (TechTalks Internship 2026). Development in final stages. |
 
 ## Tech Stack
 
 * **Frontend:** React.js
-* **Backend:** Java Spring Boot
+* **Backend:** Java : Spring Boot
 * **Database:** MySQL
 * **Utilities:** Client-side QR generation
 
