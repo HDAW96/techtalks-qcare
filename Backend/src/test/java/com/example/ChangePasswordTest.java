@@ -11,7 +11,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
 import java.util.Map;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,19 +67,9 @@ class ChangePasswordTest {
         signIn(SECOND).andExpect(status().isOk());
     }
 
-    @Test
-    void theSeededReceptionistIsAskedToChangeTheirPassword() throws Exception {
-        String token = json.readTree(mvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("phoneNumber", "03400009",
-                                "fullName", "Reception Desk One", "password", "changeme123"))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString()).path("token").asText();
-
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mustChangePassword").value(true));
-    }
+    // That the seeded staff start flagged to change their password, and are
+    // held to it, is tested in ForcedPasswordChangeTest: this class shares its
+    // database with classes that clear that flag.
 
     @Test
     void changingAPasswordNeedsASignIn() throws Exception {

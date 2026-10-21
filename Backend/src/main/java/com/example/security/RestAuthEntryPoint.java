@@ -26,6 +26,13 @@ public class RestAuthEntryPoint implements AuthenticationEntryPoint, AccessDenie
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException {
+        // Signed in, but still on a temporary password: 403, so the browser
+        // keeps the session and can still reach the change-password screen.
+        if (Boolean.TRUE.equals(request.getAttribute(JwtAuthenticationFilter.PASSWORD_CHANGE_REQUIRED))) {
+            write(response, HttpServletResponse.SC_FORBIDDEN, "PASSWORD_CHANGE_REQUIRED",
+                    "Please choose a new password before continuing.");
+            return;
+        }
         write(response, HttpServletResponse.SC_UNAUTHORIZED, "UNAUTHORIZED",
                 "Please sign in to continue.");
     }

@@ -47,6 +47,16 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler
 }
 
+let onPasswordChangeRequired = null
+
+/* The server refuses everything but /auth/me and /auth/change-password from an
+   account still on a temporary password (403 PASSWORD_CHANGE_REQUIRED). That
+   can start mid-session, when an admin resets the password, so the app
+   registers a callback here to send the user to the change-password screen. */
+export function setPasswordChangeRequiredHandler(handler) {
+  onPasswordChangeRequired = handler
+}
+
 /* `auth: false` is for sign-in and register: they must not carry an old token,
    and a 401 from them means wrong credentials, not an expired session. */
 async function request(method, path, body, { auth = true } = {}) {
@@ -95,6 +105,10 @@ async function request(method, path, body, { auth = true } = {}) {
   const payload = await res.json().catch(() => null)
 
   if (!res.ok) {
+    // A 403, not a 401: the session stays, only the destination changes.
+    if (res.status === 403 && payload?.error === 'PASSWORD_CHANGE_REQUIRED') {
+      onPasswordChangeRequired?.()
+    }
     throw new ApiError(
       payload?.message || `Request failed (${res.status})`,
       res.status,

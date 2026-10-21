@@ -14,6 +14,7 @@ import com.example.repository.ReceptionistRepository;
 import com.example.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -33,14 +34,16 @@ import java.util.List;
  * screen looks the same before and after it is wired to the backend and any
  * difference is a real bug rather than different test data.
  *
- * The seeded accounts use a known password and are flagged must_change_password.
- * That is fine for a development database and must not be relied on anywhere else.
+ * The seeded accounts all use qcare.seed.password (QCARE_SEED_PASSWORD) and are
+ * flagged must_change_password, which the server enforces: until each account
+ * chooses its own password, it can do nothing but change it. The default,
+ * changeme123, is for a development database only; ProductionSecretsCheck
+ * refuses to start a production server that still uses it.
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
-    private static final String SEED_PASSWORD = "changeme123";
 
     private final UserRepository userRepository;
     private final DoctorRepository doctorRepository;
@@ -49,6 +52,7 @@ public class DataSeeder implements CommandLineRunner {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final ReceptionistRepository receptionistRepository;
     private final PasswordEncoder passwordEncoder;
+    private final String seedPassword;
 
     public DataSeeder(UserRepository userRepository,
             DoctorRepository doctorRepository,
@@ -56,7 +60,8 @@ public class DataSeeder implements CommandLineRunner {
             MedicalServiceRepository serviceRepository,
             DoctorAvailabilityRepository availabilityRepository,
             ReceptionistRepository receptionistRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            @Value("${qcare.seed.password}") String seedPassword) {
         this.userRepository = userRepository;
         this.doctorRepository = doctorRepository;
         this.serviceRepository = serviceRepository;
@@ -64,6 +69,7 @@ public class DataSeeder implements CommandLineRunner {
         this.adminRepository = adminRepository;
         this.receptionistRepository = receptionistRepository;
         this.passwordEncoder = passwordEncoder;
+        this.seedPassword = seedPassword;
     }
 
     @Override
@@ -120,14 +126,14 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private Doctor seedDoctor(String name, String phone, String specialization) {
-        User user = new User(name, phone, passwordEncoder.encode(SEED_PASSWORD), "DOCTOR");
+        User user = new User(name, phone, passwordEncoder.encode(seedPassword), "DOCTOR");
         user.setMustChangePassword(true);
         userRepository.save(user);
         return doctorRepository.save(new Doctor(user, specialization));
     }
 
     private Receptionist seedReceptionist(String name, String phone) {
-        User user = new User(name, phone, passwordEncoder.encode(SEED_PASSWORD), "RECEPTIONIST");
+        User user = new User(name, phone, passwordEncoder.encode(seedPassword), "RECEPTIONIST");
         user.setMustChangePassword(true);
         userRepository.save(user);
 
@@ -137,7 +143,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private Admin seedAdmin(String name, String phone) {
-        User user = new User(name, phone, passwordEncoder.encode(SEED_PASSWORD), "ADMIN");
+        User user = new User(name, phone, passwordEncoder.encode(seedPassword), "ADMIN");
         user.setMustChangePassword(true);
         userRepository.save(user);
 
