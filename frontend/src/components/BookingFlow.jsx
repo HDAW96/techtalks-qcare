@@ -4,6 +4,37 @@ import { formatDay, formatTime } from '../data/format'
 import { BOOKING_STEPS } from './useBookingDraft'
 import SlotPicker from './SlotPicker'
 
+/* What a list of choices shows instead of a blank grid: while it loads, when
+   the server could not be reached (with a way to ask again), or when there is
+   nothing to pick. Nothing at all once there is something to show. */
+function OptionsNotice({ what, loading, error, empty, onRetry }) {
+  if (loading) {
+    return (
+      <div className="empty" role="status">
+        <p>Loading {what}…</p>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="empty" role="alert">
+        <p>{error.message || `Could not load the ${what}.`}</p>
+        <button type="button" className="btn btn--quiet" onClick={onRetry}>
+          Try again
+        </button>
+      </div>
+    )
+  }
+  if (empty) {
+    return (
+      <div className="empty">
+        <p>No {what} are available to book right now.</p>
+      </div>
+    )
+  }
+  return null
+}
+
 /* `onConfirm` posts the booking to the backend, which has the final say - it
    may refuse a slot someone else has just taken, and `error` carries that back
    to this screen.
@@ -12,8 +43,25 @@ import SlotPicker from './SlotPicker'
    doctor is chosen.
    The choices live in the dashboard (useBookingDraft), which also resolves
    `step` — this component only renders the step it is given. */
-function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, error }) {
-  const { doctors, services } = useBookingOptions()
+function BookingFlow({
+  booking,
+  step,
+  onStep,
+  availability,
+  availabilityLoading,
+  availabilityError,
+  onReloadAvailability,
+  onConfirm,
+  placing,
+  error,
+}) {
+  const {
+    doctors,
+    services,
+    loading: optionsLoading,
+    error: optionsError,
+    reload: reloadOptions,
+  } = useBookingOptions()
   const { doctor, service, day, time, reached, choose, placed } = booking
 
   if (step === 'done') {
@@ -66,6 +114,13 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, 
               <h2>Choose a doctor</h2>
               <p className="meta">{clinic.name}</p>
             </div>
+            <OptionsNotice
+              what="doctors"
+              loading={optionsLoading}
+              error={optionsError}
+              empty={doctors.length === 0}
+              onRetry={reloadOptions}
+            />
             <div className="picks">
               {doctors.map((d) => (
                 <button
@@ -92,6 +147,13 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, 
               <h2>Choose a service</h2>
               <p className="meta">{doctor.name}</p>
             </div>
+            <OptionsNotice
+              what="treatments"
+              loading={optionsLoading}
+              error={optionsError}
+              empty={services.length === 0}
+              onRetry={reloadOptions}
+            />
             <div className="picks">
               {services.map((s) => (
                 <button
@@ -121,17 +183,27 @@ function BookingFlow({ booking, step, onStep, availability, onConfirm, placing, 
               </p>
             </div>
 
-            <SlotPicker
-              availability={availability}
-              minutes={service.minutes}
-              day={day}
-              time={time}
-              onDay={choose.day}
-              onTime={(t) => {
-                choose.time(t)
-                onStep('confirm')
-              }}
+            <OptionsNotice
+              what="times"
+              loading={availabilityLoading}
+              error={availabilityError}
+              empty={availability.length === 0}
+              onRetry={onReloadAvailability}
             />
+
+            {availability.length > 0 && (
+              <SlotPicker
+                availability={availability}
+                minutes={service.minutes}
+                day={day}
+                time={time}
+                onDay={choose.day}
+                onTime={(t) => {
+                  choose.time(t)
+                  onStep('confirm')
+                }}
+              />
+            )}
           </>
         )}
 

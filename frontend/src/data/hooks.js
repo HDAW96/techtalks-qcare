@@ -435,6 +435,7 @@ export function useBookingOptions() {
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [reloads, setReloads] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -443,6 +444,7 @@ export function useBookingOptions() {
         if (cancelled) return
         setDoctors(doctorList)
         setServices(serviceList)
+        setError(null)
       })
       .catch((e) => {
         if (!cancelled) setError(e)
@@ -453,9 +455,15 @@ export function useBookingOptions() {
     return () => {
       cancelled = true
     }
+  }, [reloads])
+
+  // For the "Try again" button after a failed load.
+  const reload = useCallback(() => {
+    setLoading(true)
+    setReloads((n) => n + 1)
   }, [])
 
-  return { doctors, services, loading, error }
+  return { doctors, services, loading, error, reload }
 }
 
 /* For one doctor and one treatment: every bookable day, with each start time
@@ -469,7 +477,7 @@ export function useBookingOptions() {
    not block the times next to it. `days` asks for a longer window than the
    server's default five (it allows up to 30).
 
-   Returns `{ days, error, reload }`. `reload` asks again, for when the server
+   Returns `{ days, error, loading, reload }`. `reload` asks again, for when the server
    has just said a time shown as free is taken. */
 export function useAvailability(doctorId, serviceId, ignoringId, days) {
   /* The answer is stored with the request it was fetched for. Comparing that
@@ -505,8 +513,8 @@ export function useAvailability(doctorId, serviceId, ignoringId, days) {
   const reload = useCallback(() => setReloads((n) => n + 1), [])
 
   return result.key === key
-    ? { days: result.days, error: result.error, reload }
-    : { days: [], error: null, reload }
+    ? { days: result.days, error: result.error, loading: false, reload }
+    : { days: [], error: null, loading: key !== null, reload }
 }
 
 

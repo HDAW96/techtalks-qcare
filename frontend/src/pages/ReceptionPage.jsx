@@ -117,6 +117,12 @@ function ReceptionPage() {
                 </div>
               )}
 
+              {!today.loading && !today.error && doctors.length === 0 && (
+                <div className="empty">
+                  <p>No doctors are listed for today.</p>
+                </div>
+              )}
+
               {doctors.map((d) => (
                 <div key={d.doctorId} className={d.doctorId === doctorId ? 'doc doc--on' : 'doc'}>
                   <div className="doc__row">

@@ -59,7 +59,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 function DoctorPage() {
   const { user } = useAuth()
   const { schedule, error, loading, reload } = useDoctorSchedule()
-  const { queues } = usePublicBoard()
+  const { queues, error: boardError, loading: boardLoading } = usePublicBoard()
   const now = useNow()
 
   const name = schedule?.doctorName ?? user?.fullName ?? 'Doctor'
@@ -118,7 +118,7 @@ function DoctorPage() {
           <>
             <div className="dr-top">
               <Chair chair={chair} now={now} onDone={reload} />
-              <Waiting queue={queue} />
+              <Waiting queue={queue} loading={boardLoading} error={boardError} />
             </div>
             <DayList appointments={appointments} chair={chair} now={now} date={schedule.date} />
           </>
@@ -311,13 +311,18 @@ function CompleteVisit({ walkIn, onDone }) {
 
 /* Ticket numbers only: the board is public, so it never names anyone. The
    doctor gets names from the day list and from the chair. */
-function Waiting({ queue }) {
+function Waiting({ queue, loading, error }) {
   const waiting = queue ? queue.entries.filter((e) => e.status === TICKET_STATUS.WAITING) : []
   const last = Math.max(waiting.length - 1, 1)
 
+  // No queue yet can mean three different things; only the last is "not opened".
   let summary = 'Not opened yet today'
   if (queue) {
     summary = `${queue.status === 'OPEN' ? 'Queue open' : 'Queue closed'} · ${waiting.length} waiting`
+  } else if (loading) {
+    summary = 'Loading…'
+  } else if (error) {
+    summary = 'Could not load'
   }
 
   return (
@@ -327,7 +332,17 @@ function Waiting({ queue }) {
         <p className="meta meta--right">{summary}</p>
       </div>
 
-      {!queue && (
+      {!queue && loading && (
+        <p className="dr-wait__note" role="status">
+          Loading the waiting line…
+        </p>
+      )}
+      {!queue && !loading && error && (
+        <p className="dr-wait__note" role="alert">
+          Could not load the waiting line. It tries again on its own.
+        </p>
+      )}
+      {!queue && !loading && !error && (
         <p className="dr-wait__note">
           Reception has not opened your queue today. Walk-ins appear here once it opens.
         </p>
