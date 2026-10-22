@@ -274,6 +274,7 @@ these:
 | Receptionist | `03400009` | `Reception Desk One` |
 | Receptionist | `03400010` | `Reception Desk Two` |
 
+<<<<<<< HEAD
 All of them start with the password set in `QCARE_SEED_PASSWORD`. On a laptop
 that is not set, so the password is **`changeme123`** — for local development
 only.
@@ -335,12 +336,94 @@ needed on a laptop; a deployed server needs every variable marked "Yes".
 
 **Backend** — 114 tests, against an in-memory database, so MySQL does not need
 to be running:
+=======
+That is a development password on a development database. Both are flagged
+`must_change_password`, so **the first sign-in on the website asks you to
+choose your own password** before the desk opens. After that, sign in with the
+password you chose. `changeme123` keeps working through the API until then,
+which is what the automated tests use. Anyone signed in can change their
+password again from the footer ("Change password").
+
+## Demo mode
+
+> **Demo only.** The password below is public and the demo overwrites the
+> passwords of the five demo accounts. Never use demo mode on a real or shared
+> database.
+
+Demo mode fills a **fresh** database with one known login per role, today's
+appointments, upcoming appointments and an open queue with sample tickets, so
+every screen has something to show.
+
+### Run it
+
+1. Create an empty `qcare_db` (step 2 above), start MySQL and set
+   `QCARE_DB_PASSWORD` (step 3 above).
+2. Start the backend with the `demo` profile:
+
+   ```bash
+   cd Backend
+   SPRING_PROFILES_ACTIVE=demo ./mvnw spring-boot:run
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   cd Backend
+   $env:SPRING_PROFILES_ACTIVE = 'demo'
+   .\mvnw.cmd spring-boot:run
+   ```
+
+3. Start the frontend as in step 5 (`cd frontend && npm install && npm run dev`)
+   and open **http://localhost:5173**.
+
+### Demo accounts
+
+All five accounts use the same demo-only password: **`Demo-Pass1!`**
+(override it with the `QCARE_DEMO_PASSWORD` environment variable before starting).
+Sign in with phone number, full name and password. None of them is asked to
+change the password.
+
+| Role | Phone | Full name | Password | Lands on |
+| :--- | :--- | :--- | :--- | :--- |
+| Receptionist | `03400009` | `Reception Desk One` | `Demo-Pass1!` | `/reception` |
+| Doctor | `03400001` | `Dr. Rania Haddad` | `Demo-Pass1!` | `/doctor` |
+| Admin | `03400011` | `Admin One` | `Demo-Pass1!` | `/admin` |
+| Patient | `03400020` | `Demo Patient` | `Demo-Pass1!` | `/dashboard` |
+
+The table lists one login per role. The fifth account, a second doctor
+(`03400002` / `Dr. Karim Fares`), gets the same password.
+
+### What it creates
+
+- Today: five appointments across both doctors (one completed, one checked in,
+  three booked) and an **open queue** for Dr. Haddad with one finished, one in
+  the chair and three waiting tickets. Dr. Fares has an open, empty queue.
+- Upcoming: booked appointments over the next days, two of them for Demo Patient;
+  Demo Patient also has a completed and a cancelled past visit. Demo Patient has no
+  ticket today, so they can join the queue through the `/join` QR flow.
+- Sample patients use the reserved phones `03400101`-`03400108`.
+
+### Running it again
+
+Restarting with the demo profile is safe: nothing is duplicated. It restores the
+demo passwords (even if you changed one), clears the *must change password* flag,
+and rebuilds only the sample patients' appointments and tickets relative to
+today's date. Other people's data is left alone. The demo refuses to start when `QCARE_ENV=production`, and against a
+MySQL server that is not `localhost` (override for the host check only:
+`qcare.demo.allow-remote=true`; nothing overrides the production check).
+
+"Today" is the backend machine's date. If it runs in another time zone from the
+clinic, start it with `-Dspring-boot.run.jvmArguments=-Duser.timezone=Asia/Beirut`.
+
+### Tests
+>>>>>>> 9963bd2 (SCRUM-113: demo-only seeder, README demo section)
 
 ```bash
 cd Backend
 ./mvnw test
 ```
 
+<<<<<<< HEAD
 **Windows (PowerShell):** `.\mvnw.cmd test`
 
 **Frontend** — 27 tests:
@@ -354,3 +437,7 @@ CI runs on every pull request and on `main` after a merge. It runs the backend
 tests, and the frontend lint and build (`npm run lint`, `npm run build`). The
 frontend tests are not part of CI yet, so run `npm test` yourself before
 opening a pull request.
+=======
+Tests use an in-memory H2 database; MySQL need not be running. The demo profile
+has its own isolated test (`DemoDataSeederTest`).
+>>>>>>> 9963bd2 (SCRUM-113: demo-only seeder, README demo section)
