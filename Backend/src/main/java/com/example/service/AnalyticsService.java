@@ -122,16 +122,22 @@ public class AnalyticsService {
         long cancelled = 0;
         long noShow = 0;
         long upcoming = 0;
+        System.out.println("status: " + a.getStatus());
         for (Appointment a : appointments) {
             switch (a.getStatus()) {
                 case "COMPLETED" -> completed++;
                 case "CANCELLED" -> cancelled++;
-                default -> {
-                    if (a.getAppointmentDatetime().isAfter(now)) {
-                        upcoming++;
+                case "CHECKED_IN" -> { //NO SHOW 
+                        }
+                case "BOOKED" -> {
+                     if (a.getAppointmentDatetime().isAfter(now)) {
+                           upcoming++;
                     } else {
-                        noShow++;
+                            noShow++;
                     }
+             }
+                default -> {
+                    // ignore other statuses
                 }
             }
         }
