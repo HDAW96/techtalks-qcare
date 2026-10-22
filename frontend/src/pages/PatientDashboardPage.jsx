@@ -176,7 +176,12 @@ function PatientDashboardPage() {
   const booking = useBookingDraft()
   // The server works out free times: it knows the doctor's hours and everyone
   // else's bookings, which this screen must never see.
-  const { days: availability } = useAvailability(booking.doctor?.id, booking.service?.id)
+  const {
+    days: availability,
+    loading: availabilityLoading,
+    error: availabilityError,
+    reload: reloadAvailability,
+  } = useAvailability(booking.doctor?.id, booking.service?.id)
 
   /* Where the patient is on the dashboard lives in the URL, so a refresh
      keeps it and the browser's Back button steps back through it. */
@@ -393,6 +398,9 @@ function PatientDashboardPage() {
               step={bookingStep}
               onStep={openStep}
               availability={availability}
+              availabilityLoading={availabilityLoading}
+              availabilityError={availabilityError}
+              onReloadAvailability={reloadAvailability}
               onConfirm={confirmBooking}
               placing={placing}
               error={bookingError}
