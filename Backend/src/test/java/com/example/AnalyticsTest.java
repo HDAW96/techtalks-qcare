@@ -268,4 +268,70 @@ class AnalyticsTest {
                 .andReturn().getResponse().getContentAsString();
         return json.readTree(response).path("token").asText();
     }
+    
+    @Test
+    void aPastBookedAppointmentCountsAsANoShow() throws Exception {
+        JsonNode totals = body(analytics(MARCH_2020)
+            .andExpect(status().isOk()))
+            .path("appointments");
+
+         assertThat(totals.path("noShow").asLong()).isEqualTo(1);
+        }
+
+    @Test
+    void aCheckedInAppointmentDoesNotCountAsANoShow() throws Exception {
+
+        long noShowsBefore = body(analytics(MARCH_2020)
+            .andExpect(status().isOk()))
+            .path("appointments")
+            .path("noShow")
+            .asLong();
+
+        Patient patient =
+            patientRepository.save(
+                    new Patient("Checked In", "03781999"));
+
+        appointment(
+            patient,
+            doctorA,
+           LocalDateTime.of(2020, 4, 20, 9, 0),
+            cleaning,
+            "CHECKED_IN");
+
+         JsonNode totals = body(analytics(MARCH_2020)
+            .andExpect(status().isOk()))
+            .path("appointments");
+
+        assertThat(totals.path("noShow").asLong())
+            .isEqualTo(noShowsBefore);
+    }
+
+    @Test
+    void aCompletedAppointmentDoesNotCountAsANoShow() throws Exception {
+
+        long noShowsBefore = body(analytics(MARCH_2020)
+            .andExpect(status().isOk()))
+            .path("appointments")
+            .path("noShow")
+            .asLong();
+
+         Patient patient =
+            patientRepository.save(
+                    new Patient("Completed", "03781998"));
+
+        appointment(
+            patient,
+            doctorA,
+            LocalDateTime.of(2020, 4, 21, 9, 0),
+            cleaning,
+            "COMPLETED");
+
+         JsonNode totals = body(analytics(MARCH_2020)
+            .andExpect(status().isOk()))
+            .path("appointments");
+
+         assertThat(totals.path("noShow").asLong())
+            .isEqualTo(noShowsBefore);
+    }
+
 }
