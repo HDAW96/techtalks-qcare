@@ -46,7 +46,8 @@ class AnalyticsTest {
 
     private static final String SEED_PASSWORD = "changeme123";
     private static final String MARCH_2020 = "from=2020-03-01&to=2020-03-31";
-
+    private static final String APRIL_2020 = "?from=2020-04-01&to=2020-04-30";
+    
     @Autowired
     private MockMvc mvc;
     @Autowired
@@ -144,8 +145,8 @@ class AnalyticsTest {
         assertThat(body.path("to").asText()).isEqualTo("2020-03-31");
 
         JsonNode totals = body.path("appointments");
-        assertThat(totals.path("total").asLong()).isEqualTo(5);
-        assertThat(totals.path("completed").asLong()).isEqualTo(3);
+        assertThat(totals.path("total").asLong()).isEqualTo(4);
+        assertThat(totals.path("completed").asLong()).isEqualTo(2);
         assertThat(totals.path("cancelled").asLong()).isEqualTo(1);
         // The 16:00 booking on the last day of the range is counted.
         assertThat(totals.path("noShow").asLong()).isEqualTo(1);
@@ -271,7 +272,7 @@ class AnalyticsTest {
     
     @Test
     void aPastBookedAppointmentCountsAsANoShow() throws Exception {
-        long noShowsBefore = body(analytics(MARCH_2020)
+        long noShowsBefore = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments")
                 .path("noShow")
@@ -283,11 +284,11 @@ class AnalyticsTest {
         appointment(
                 patient,
                 doctorA,
-                LocalDateTime.of(2020, 3, 23, 9, 0),
+                LocalDateTime.of(2020, 4, 1, 9, 0),
                 cleaning,
                 "BOOKED");
 
-        long noShowsAfter = body(analytics(MARCH_2020)
+        long noShowsAfter = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments")
                 .path("noShow")
@@ -298,8 +299,7 @@ class AnalyticsTest {
 
     @Test
     void aCheckedInAppointmentDoesNotCountAsANoShow() throws Exception {
-
-        long noShowsBefore = body(analytics(MARCH_2020)
+        long noShowsBefore = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments")
                 .path("noShow")
@@ -311,11 +311,11 @@ class AnalyticsTest {
         appointment(
                 patient,
                 doctorA,
-                LocalDateTime.of(2020, 3, 20, 9, 0),
+                LocalDateTime.of(2020, 4, 2, 9, 0),
                 cleaning,
                 "CHECKED_IN");
 
-        JsonNode totals = body(analytics(MARCH_2020)
+        JsonNode totals = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments");
 
@@ -325,8 +325,7 @@ class AnalyticsTest {
 
     @Test
     void aCompletedAppointmentDoesNotCountAsANoShow() throws Exception {
-
-        long noShowsBefore = body(analytics(MARCH_2020)
+        long noShowsBefore = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments")
                 .path("noShow")
@@ -338,16 +337,42 @@ class AnalyticsTest {
         appointment(
                 patient,
                 doctorA,
-                LocalDateTime.of(2020, 3, 2, 9, 0),
+                LocalDateTime.of(2020, 4, 3, 9, 0),
                 cleaning,
                 "COMPLETED");
 
-        JsonNode totals = body(analytics(MARCH_2020)
+        JsonNode totals = body(analytics(APRIL_2020)
                 .andExpect(status().isOk()))
                 .path("appointments");
 
         assertThat(totals.path("noShow").asLong())
                 .isEqualTo(noShowsBefore);
     }
+
+    @Test
+    void aMissedAppointmentCountsAsNoShow() throws Exception {
+        long noShowsBefore = body(analytics(APRIL_2020)
+                .andExpect(status().isOk()))
+                .path("appointments")
+                .path("noShow")
+                .asLong();
+
+        Patient patient = patientRepository.save(
+                new Patient("Missed Patient", "03781991"));
+
+        appointment(
+                patient,
+                doctorA,
+                LocalDateTime.of(2020, 4, 4, 9, 0),
+                cleaning,
+                "MISSED");
+
+        JsonNode totals = body(analytics(APRIL_2020)
+                .andExpect(status().isOk()))
+                .path("appointments");
+
+        assertThat(totals.path("noShow").asLong())
+                .isEqualTo(noShowsBefore + 1);
+    } 
 
 }
