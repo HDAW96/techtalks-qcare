@@ -99,6 +99,9 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
             @Param("patient") Patient patient,
             @Param("queueDate") LocalDate queueDate);
 
+    /** Every ticket a patient holds, whatever its status or date. Used by the demo seeder's reset. */
+    List<QueueTicket> findByPatient(Patient patient);
+
     /** Whether any queue ticket, whatever its status, uses this service. */
     boolean existsByMedicalService(MedicalService service);
 
