@@ -58,6 +58,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
                     "Please enter your full name.");
         }
+        Names.requireWithinLimit(fullName);
         if (!PhoneNumbers.isValidLebanese(phone)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");

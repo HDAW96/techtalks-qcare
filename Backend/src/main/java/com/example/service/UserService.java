@@ -96,6 +96,7 @@ public class UserService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
                     "Please enter the user's full name.");
         }
+        Names.requireWithinLimit(fullName);
         if (!PhoneNumbers.isValidLebanese(phone)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");
@@ -148,6 +149,7 @@ public class UserService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
                         "Please enter a valid full name.");
             }
+            Names.requireWithinLimit(fullName);
         }
 
         String phone = user.getPhoneNumber();

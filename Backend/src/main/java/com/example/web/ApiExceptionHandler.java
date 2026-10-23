@@ -3,6 +3,7 @@ package com.example.web;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -79,6 +80,19 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(Map.of("message", "That action is not allowed here.",
                         "error", "METHOD_NOT_ALLOWED"));
+    }
+
+    /**
+     * A body sent as something other than JSON (or with no content type at
+     * all). Spring raises this before any controller runs, so without this it
+     * fell to the catch-all and answered 500.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, String>> handleWrongContentType(
+            HttpMediaTypeNotSupportedException e) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(Map.of("message", "Please send that as JSON.",
+                        "error", "UNSUPPORTED_MEDIA_TYPE"));
     }
 
     /**

@@ -27,6 +27,7 @@ import com.example.repository.QueueRepository;
 import com.example.repository.QueueTicketRepository;
 import com.example.repository.ReceptionistRepository;
 import com.example.repository.UserRepository;
+import com.example.util.Names;
 import com.example.util.PhoneNumbers;
 import com.example.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -304,6 +305,7 @@ public class QueueService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
                     "Please enter the patient's full name.");
         }
+        Names.requireWithinLimit(fullName);
         if (!PhoneNumbers.isValidLebanese(phone)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");
@@ -609,6 +611,7 @@ public class QueueService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_REQUIRED",
                     "Please enter your full name.");
         }
+        Names.requireWithinLimit(fullName);
         if (!PhoneNumbers.isValidLebanese(phone)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                     "Please enter a valid Lebanese phone number.");
