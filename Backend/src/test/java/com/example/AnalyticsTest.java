@@ -144,8 +144,8 @@ class AnalyticsTest {
         assertThat(body.path("to").asText()).isEqualTo("2020-03-31");
 
         JsonNode totals = body.path("appointments");
-        assertThat(totals.path("total").asLong()).isEqualTo(4);
-        assertThat(totals.path("completed").asLong()).isEqualTo(2);
+        assertThat(totals.path("total").asLong()).isEqualTo(6);
+        assertThat(totals.path("completed").asLong()).isEqualTo(3);
         assertThat(totals.path("cancelled").asLong()).isEqualTo(1);
         // The 16:00 booking on the last day of the range is counted.
         assertThat(totals.path("noShow").asLong()).isEqualTo(1);
@@ -271,67 +271,83 @@ class AnalyticsTest {
     
     @Test
     void aPastBookedAppointmentCountsAsANoShow() throws Exception {
-        JsonNode totals = body(analytics(MARCH_2020)
-            .andExpect(status().isOk()))
-            .path("appointments");
+        long noShowsBefore = body(analytics(MARCH_2020)
+                .andExpect(status().isOk()))
+                .path("appointments")
+                .path("noShow")
+                .asLong();
 
-         assertThat(totals.path("noShow").asLong()).isEqualTo(1);
-        }
+        Patient patient = patientRepository.save(
+                new Patient("Past Booked Patient", "03781992"));
+
+        appointment(
+                patient,
+                doctorA,
+                LocalDateTime.of(2020, 3, 23, 9, 0),
+                cleaning,
+                "BOOKED");
+
+        long noShowsAfter = body(analytics(MARCH_2020)
+                .andExpect(status().isOk()))
+                .path("appointments")
+                .path("noShow")
+                .asLong();
+
+        assertThat(noShowsAfter).isEqualTo(noShowsBefore + 1);
+    }
 
     @Test
     void aCheckedInAppointmentDoesNotCountAsANoShow() throws Exception {
 
         long noShowsBefore = body(analytics(MARCH_2020)
-            .andExpect(status().isOk()))
-            .path("appointments")
-            .path("noShow")
-            .asLong();
+                .andExpect(status().isOk()))
+                .path("appointments")
+                .path("noShow")
+                .asLong();
 
-        Patient patient =
-            patientRepository.save(
-                    new Patient("Checked In", "03781999"));
+        Patient patient = patientRepository.save(
+                new Patient("Checked In", "03781999"));
 
         appointment(
-            patient,
-            doctorA,
-           LocalDateTime.of(2020, 4, 20, 9, 0),
-            cleaning,
-            "CHECKED_IN");
+                patient,
+                doctorA,
+                LocalDateTime.of(2020, 3, 20, 9, 0),
+                cleaning,
+                "CHECKED_IN");
 
-         JsonNode totals = body(analytics(MARCH_2020)
-            .andExpect(status().isOk()))
-            .path("appointments");
+        JsonNode totals = body(analytics(MARCH_2020)
+                .andExpect(status().isOk()))
+                .path("appointments");
 
         assertThat(totals.path("noShow").asLong())
-            .isEqualTo(noShowsBefore);
+                .isEqualTo(noShowsBefore);
     }
 
     @Test
     void aCompletedAppointmentDoesNotCountAsANoShow() throws Exception {
 
         long noShowsBefore = body(analytics(MARCH_2020)
-            .andExpect(status().isOk()))
-            .path("appointments")
-            .path("noShow")
-            .asLong();
+                .andExpect(status().isOk()))
+                .path("appointments")
+                .path("noShow")
+                .asLong();
 
-         Patient patient =
-            patientRepository.save(
-                    new Patient("Completed", "03781998"));
+        Patient patient = patientRepository.save(
+                new Patient("Completed", "03781998"));
 
         appointment(
-            patient,
-            doctorA,
-            LocalDateTime.of(2020, 4, 21, 9, 0),
-            cleaning,
-            "COMPLETED");
+                patient,
+                doctorA,
+                LocalDateTime.of(2020, 3, 2, 9, 0),
+                cleaning,
+                "COMPLETED");
 
-         JsonNode totals = body(analytics(MARCH_2020)
-            .andExpect(status().isOk()))
-            .path("appointments");
+        JsonNode totals = body(analytics(MARCH_2020)
+                .andExpect(status().isOk()))
+                .path("appointments");
 
-         assertThat(totals.path("noShow").asLong())
-            .isEqualTo(noShowsBefore);
+        assertThat(totals.path("noShow").asLong())
+                .isEqualTo(noShowsBefore);
     }
 
 }
