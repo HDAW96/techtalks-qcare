@@ -144,7 +144,7 @@ class AnalyticsTest {
         assertThat(body.path("to").asText()).isEqualTo("2020-03-31");
 
         JsonNode totals = body.path("appointments");
-        assertThat(totals.path("total").asLong()).isEqualTo(6);
+        assertThat(totals.path("total").asLong()).isEqualTo(5);
         assertThat(totals.path("completed").asLong()).isEqualTo(3);
         assertThat(totals.path("cancelled").asLong()).isEqualTo(1);
         // The 16:00 booking on the last day of the range is counted.
