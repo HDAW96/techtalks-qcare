@@ -47,6 +47,9 @@ author**.
 
 ## Running it locally
 
+Want to see the whole app with sample data? Do steps 1-5 below, then follow
+[Demo mode](#demo-mode) and the [demo walkthrough](docs/demo-walkthrough.md).
+
 ### What you need first
 
 | | Version | Notes |
@@ -245,7 +248,7 @@ with a limit, given in the notes. **Not built** means it does not exist yet.
 | :--- | :--- | :--- |
 | Manage users | Done | Add, edit and remove staff accounts. Removing deactivates the account rather than deleting it, so its history stays |
 | Manage services | Done | Add, edit, deactivate and delete treatments. One already used by an appointment or a queue ticket can only be deactivated |
-| Analytics dashboard | Partial | Works for any date range. A booking is counted as a no-show once its time has passed unless it was completed or cancelled, so a patient who is checked in and still waiting after their booked time counts as a no-show |
+| Analytics dashboard | Partial | Works for any date range. A booking is counted as a no-show once its time has passed while it is still booked (or marked missed). A patient who has been checked in is not counted as a no-show |
 | Subscriptions and Reports | Not built | Left out of the admin sidebar until they are built |
 
 ### Everyone
@@ -255,6 +258,34 @@ with a limit, given in the notes. **Not built** means it does not exist yet.
 | Public queue board (home page) | Done | Ticket numbers and waits only, no names |
 | Change password | Done | From the footer ("Change password") |
 | Forced first-time password change | Done | Accounts created by the seeder or by an admin must choose their own password at first sign-in. The server enforces it, not only the screen |
+
+## Known limits
+
+What QCare does not do, so nobody is surprised in a demo or a review. Most of
+these are the approved scope; the rest are noted in the tables above.
+
+- **Walk-in visits have no notes and no history.** A walk-in has no
+  appointment to attach notes to, so the doctor cannot save notes for one and
+  the visit does not appear in patient history. This is by design.
+- **Doctors' time off has no screen.** The server enforces it
+  (`/api/doctors/me/leave`) but it can only be set through the API.
+- **Notifications are sample data.** The patient dashboard panel is not backed
+  by a table, and there are no SMS or WhatsApp reminders.
+- **English interface only.** Arabic names and text are stored correctly
+  (`utf8mb4`), but there is no Arabic interface.
+- **The profile is read-only.** A name or phone number is changed at the desk.
+- **No payments, staff scheduling, subscriptions or reports.** Subscriptions
+  and Reports are left out of the admin sidebar.
+- **"Today" is the server's date.** If the backend runs in another time zone
+  from the clinic, start it with
+  `-Dspring-boot.run.jvmArguments=-Duser.timezone=Asia/Beirut`.
+- **Scanning the QR with a real phone needs extra setup.** See
+  [Scanning the QR code with a real phone](#scanning-the-qr-code-with-a-real-phone).
+- **Demo mode is for fresh, local databases only.** It overwrites the demo
+  accounts' passwords with a public one and refuses to run in production.
+- **The frontend tests are not in CI yet.** Run `npm test` yourself before
+  opening a pull request.
+- **Not deployed.** The live demo link above is empty until it is.
 
 ## Seeded accounts
 
@@ -335,6 +366,11 @@ change the password.
 
 The table lists one login per role. The fifth account, a second doctor
 (`03400002` / `Dr. Karim Fares`), gets the same password.
+
+### Walkthrough
+
+A step-by-step script for showing each role (receptionist, doctor, patient,
+admin) is in [docs/demo-walkthrough.md](docs/demo-walkthrough.md).
 
 ### What it creates
 
