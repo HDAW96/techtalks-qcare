@@ -112,9 +112,9 @@ public class AnalyticsService {
     }
 
     /**
-     * There is no no-show status: a booking still BOOKED once its time has
-     * passed is counted as a no-show. A visit the doctor forgot to complete
-     * looks the same.
+     * Calculates appointment totals by status.
+     * Past BOOKED and MISSED appointments count as no-shows.
+     * CHECKED_IN appointments are excluded from the no-show count.
      */
     private static AppointmentTotals appointmentTotals(List<Appointment> appointments) {
         LocalDateTime now = LocalDateTime.now();
@@ -126,6 +126,15 @@ public class AnalyticsService {
             switch (a.getStatus()) {
                 case "COMPLETED" -> completed++;
                 case "CANCELLED" -> cancelled++;
+                case "CHECKED_IN" -> { // seen by the clinic: not a no-show
+                }
+                case "BOOKED" -> {
+                    if (a.getAppointmentDatetime().isAfter(now)) {
+                        upcoming++;
+                    } else {
+                        noShow++;
+                    }
+                }
                 default -> {
                     if (a.getAppointmentDatetime().isAfter(now)) {
                         upcoming++;
