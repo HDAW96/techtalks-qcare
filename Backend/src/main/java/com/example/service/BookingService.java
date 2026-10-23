@@ -45,6 +45,8 @@ public class BookingService {
     private static final DateTimeFormatter LOCAL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
+    /** Matches the clinical_notes column, so long notes are refused, not a crash. */
+    private static final int MAX_NOTES_LENGTH = 2000;
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
@@ -467,8 +469,10 @@ public class BookingService {
                 "Only a booked or checked-in appointment can be completed.");
     }
 
-   
-    appointment.setClinicalNotes(request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim());
+
+    String notes = request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim();
+    requireNotesWithinLimit(notes);
+    appointment.setClinicalNotes(notes);
     appointment.setStatus("COMPLETED");
     appointmentRepository.save(appointment);
 
@@ -521,6 +525,7 @@ public class BookingService {
         QueueTicket ticket = inChair.get(0);
 
         String notes = request.getClinicalNotes() == null ? null : request.getClinicalNotes().trim();
+        requireNotesWithinLimit(notes);
         if (ticket.getAppointment() == null && notes != null && !notes.isEmpty()) {
             // Checked before anything is changed: the visit stays in the chair.
             throw new ApiException(HttpStatus.BAD_REQUEST, "WALK_IN_NOTES_NOT_SAVED",
@@ -580,4 +585,10 @@ public class BookingService {
                 });
     }
 
+    private static void requireNotesWithinLimit(String notes) {
+        if (notes != null && notes.length() > MAX_NOTES_LENGTH) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NOTES_TOO_LONG",
+                    "The notes can be at most " + MAX_NOTES_LENGTH + " characters.");
+        }
+    }
 }
