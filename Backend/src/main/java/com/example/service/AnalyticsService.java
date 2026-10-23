@@ -128,14 +128,7 @@ public class AnalyticsService {
                 case "CANCELLED" -> cancelled++;
                 case "CHECKED_IN" -> { // seen by the clinic: not a no-show
                 }
-                case "BOOKED" -> {
-                    if (a.getAppointmentDatetime().isAfter(now)) {
-                        upcoming++;
-                    } else {
-                        noShow++;
-                    }
-                }
-                default -> {
+                 case "BOOKED", "MISSED" -> {
                     if (a.getAppointmentDatetime().isAfter(now)) {
                         upcoming++;
                     } else {
